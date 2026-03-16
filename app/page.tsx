@@ -1,65 +1,91 @@
-import Image from "next/image";
+import { supabase } from "@/lib/supabase";
+import { Post } from "@/lib/types";
+import PostsGrid from "./components/PostsGrid";
+import InputForm from "./components/InputForm";
 
-export default function Home() {
+export const revalidate = 30; // ISR every 30s
+
+async function getPosts(): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from("post")
+    .select("*")
+    .neq("status", "processing")
+    .order("updated_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    console.error("Error fetching posts:", error);
+    return [];
+  }
+  return (data as Post[]) || [];
+}
+
+export default async function Home() {
+  const posts = await getPosts();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-grid relative">
+      {/* Background glows */}
+      <div className="bg-radial-top fixed inset-0 pointer-events-none z-0" />
+      <div className="fixed top-20 left-10 w-72 h-72 bg-indigo-600/10 rounded-full blur-[100px] animate-breathe pointer-events-none" />
+      <div
+        className="fixed bottom-20 right-10 w-96 h-96 bg-purple-600/8 rounded-full blur-[120px] animate-breathe pointer-events-none"
+        style={{ animationDelay: "2s" }}
+      />
+
+      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* ── HERO ──────────────────────────────── */}
+        <header className="text-center mb-8 animate-fade-in-down">
+          <div className="inline-flex items-center justify-center mb-5">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse-glow">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              </div>
+              <div className="absolute -inset-2 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-xl -z-10 animate-breathe" />
+            </div>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
+            <span className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-transparent animate-gradient-shift">
+              NusaValid
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-2 text-white/40 text-sm sm:text-base font-medium max-w-lg mx-auto">
+            AI-Powered Multi-Source Fact Verification Engine
           </p>
+
+          {/* Ticker */}
+          <div className="mt-5 overflow-hidden rounded-full glass px-4 py-1.5 max-w-md mx-auto">
+            <div className="flex" style={{ animation: "marquee 25s linear infinite" }}>
+              <span className="text-[10px] text-white/30 whitespace-nowrap mr-8">
+                🛡 Trusted Sources &nbsp;•&nbsp; 🤖 LLM Analysis &nbsp;•&nbsp; 📊 Confidence Scoring &nbsp;•&nbsp; ✅ Real-time Verification &nbsp;•&nbsp; 🌐 Multi-Platform &nbsp;•&nbsp;
+              </span>
+              <span className="text-[10px] text-white/30 whitespace-nowrap mr-8">
+                🛡 Trusted Sources &nbsp;•&nbsp; 🤖 LLM Analysis &nbsp;•&nbsp; 📊 Confidence Scoring &nbsp;•&nbsp; ✅ Real-time Verification &nbsp;•&nbsp; 🌐 Multi-Platform &nbsp;•&nbsp;
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* ── INPUT FORM ────────────────────────── */}
+        <div className="mb-8">
+          <InputForm />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* ── POSTS GRID + FILTER (client-side) ── */}
+        <PostsGrid posts={posts} />
+
+        {/* ── FOOTER ────────────────────────────── */}
+        <footer className="mt-16 text-center pb-8 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
+          <div className="glass rounded-2xl p-4 max-w-sm mx-auto">
+            <p className="text-white/20 text-[10px]">Powered by AI Multi-Source Analysis Engine</p>
+            <p className="text-white/10 text-[9px] mt-1">© 2026 NusaValid — Hackathon BI</p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
