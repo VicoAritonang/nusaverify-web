@@ -29,7 +29,7 @@ export default function ResultBox({ post }: { post: Post }) {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       ),
-      label: "Terdeteksi Hoax"
+      label: "Terdeteksi Hoaks"
     },
     uncertain: {
       color: "amber",
@@ -80,9 +80,11 @@ export default function ResultBox({ post }: { post: Post }) {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className={`text-3xl font-black font-mono tracking-tighter ${c.textClass}`}>
-                {conf > 0 ? `+${conf}` : conf}
+                {Math.round(pct)}%
               </span>
-              <span className="text-[9px] uppercase tracking-widest text-white/40 mt-1">Confidence</span>
+              <span className="text-[9px] uppercase tracking-widest text-white/40 mt-1 text-center leading-tight">
+                Tingkat<br/>Keyakinan
+              </span>
             </div>
           </div>
         </div>

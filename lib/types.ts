@@ -12,6 +12,7 @@ export interface Post {
   updated_at: string;
   status: PostStatus;
   category: string | null;
+  information: string | null;
 }
 
 export interface Think {

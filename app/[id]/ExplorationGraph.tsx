@@ -125,8 +125,20 @@ export default function ExplorationGraph({ post, think, state }: Props) {
   const [dims,      setDims]      = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Modal state
   const [modal, setModal] = useState<{ title: string; body: string; url?: string } | null>(null);
+
+  // Auto-minimize when exploration finishes
+  const [minimized, setMinimized] = useState(false);
+  useEffect(() => {
+    if (state === "analyzing" || state === "completed") {
+      const t = setTimeout(() => {
+        setMinimized(true);
+      }, 1500); // Wait 1.5s after finishing before snapping closed
+      return () => clearTimeout(t);
+    } else {
+      setMinimized(false);
+    }
+  }, [state]);
 
   // resize observer
   useEffect(() => {
@@ -213,7 +225,7 @@ export default function ExplorationGraph({ post, think, state }: Props) {
           addNode({
             id: `${cfg.key}-insight`, type: "insight",
             label:    preview,
-            labelInfo: cfg.display.replace("Official: ", "").replace("Media: ", ""), // Strip prefix if needed
+            labelInfo: cfg.key, // e.g. "cnbc" or "official"
             fullText: insightVal,
             val: 15, color: C.insightBorder,
             ...NODE_DIMS.insight,
@@ -227,7 +239,7 @@ export default function ExplorationGraph({ post, think, state }: Props) {
           const sv      = Number(scoreRaw);
           const abs     = Math.abs(sv);
           const sc      = scoreColor(sv);
-          const verdictWord = sv < 0 ? "Hoax" : sv > 0 ? "Valid" : "Netral";
+          const verdictWord = sv < 0 ? "Hoaks" : sv > 0 ? "Valid" : "Netral";
           // label stores "PCT|VERDICT" — split in painter
           addNode({
             id: `${cfg.key}-score`, type: "score",
@@ -426,10 +438,17 @@ export default function ExplorationGraph({ post, think, state }: Props) {
     (fg as any).d3Force("charge")?.strength(-600);
     (fg as any).d3ReheatSimulation?.();
 
-    // Restrict max zoom out to bounding box + tight padding
+    // Restrict max zoom out to bounding box + dynamic tight padding
     setTimeout(() => {
-      // 30px buffer for much tighter fit
-      fg.zoomToFit(200, 30); 
+      let padding = 30; // default for L3
+      const numNodes = graphData.nodes.length;
+      if (numNodes === 1) {
+        padding = 150; // extra large buffer for just L1
+      } else if (numNodes > 1 && numNodes < 7) {
+        padding = 80;  // medium buffer for L2
+      }
+
+      fg.zoomToFit(200, padding); 
       setTimeout(() => {
         // read resulting scale and strictly lock it as min bound (max zoom out)
         // this native d3 setting instantly blocks zooming out past this point
@@ -487,12 +506,37 @@ export default function ExplorationGraph({ post, think, state }: Props) {
   }, []);
 
   // ── RENDER ──────────────────────────────────────────────────────────
+  if (minimized) {
+    return (
+      <div 
+        onClick={() => setMinimized(false)}
+        className="glass rounded-2xl p-4 cursor-pointer hover:bg-white/5 transition-all text-center animate-fade-in-up border border-sky-700/40"
+      >
+        <span className="text-white/40 text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2">
+          <span>+</span>
+          Knowledge Graph Tersimpan (Klik untuk melihat ulang)
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full rounded-3xl overflow-hidden"
+      className="relative w-full rounded-3xl overflow-hidden animate-fade-in-up"
       style={{ height: "80vh", minHeight: 600, background: "linear-gradient(135deg,#040d1a 0%,#060f1e 100%)" }}
     >
+      {/* Header controls (Close button if currently finished but user expanded it) */}
+      {(state === "analyzing" || state === "completed") && (
+        <button 
+          onClick={() => setMinimized(true)}
+          className="absolute top-5 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-2"
+        >
+          <span>Tutup Canvas</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+      )}
+
       {/* HUD badge */}
       <div className="absolute top-5 left-5 z-10 pointer-events-none flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
@@ -508,7 +552,7 @@ export default function ExplorationGraph({ post, think, state }: Props) {
           { color: C.sourceBorder,  label: "Sumber" },
           { color: C.insightBorder, label: "Insight" },
           { color: C.scoreValidBdr, label: "Valid (hijau)" },
-          { color: C.scoreHoaxBdr,  label: "Hoax (merah)" },
+          { color: C.scoreHoaxBdr,  label: "Hoaks (merah)" },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1.5 text-[9px] text-white/40">
             <span className="w-2.5 h-2.5 rounded-[2px] inline-block" style={{ background: color }} />

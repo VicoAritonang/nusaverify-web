@@ -62,7 +62,7 @@ const CONFIG = {
     mutedColor: "text-red-400/60",
     icon: (c: string) => <AlertIcon color={c} />,
     barClass: "bg-red-500",
-    label: "Hoax",
+    label: "Hoaks",
     labelColor: "#dc2626",
   },
   uncertain: {

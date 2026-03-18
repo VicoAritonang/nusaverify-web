@@ -21,7 +21,6 @@ export default function AnalysisDetail({ id }: { id: string }) {
 
     const poll = async () => {
       try {
-        // Fetch with maybeSingle to avoid throw on 0 rows
         const { data: pData, error: pError } = await supabase.from("post").select("*").eq("id", id).maybeSingle();
         const { data: tData, error: tError } = await supabase.from("think").select("*").eq("post_id", id).maybeSingle();
 
@@ -50,8 +49,9 @@ export default function AnalysisDetail({ id }: { id: string }) {
           prevStateRef.current = t.state;
         }
 
-        let interval = 5000;
-        if (tData?.state === "analyzing") interval = 10000;
+        let interval = 2000;
+        if (tData?.state === "exploring") interval = 2000;
+        if (tData?.state === "analyzing") interval = 5000;
 
         if (pData?.result != null || tData?.state === "completed") {
           return; // stop polling
@@ -61,7 +61,7 @@ export default function AnalysisDetail({ id }: { id: string }) {
       } catch (err: any) {
         console.error("Poll catch error", err);
         setFetchError(`Terjadi kesalahan interval: ${err?.message}`);
-        timeoutId = setTimeout(poll, 5000);
+        timeoutId = setTimeout(poll, 2000);
       }
     };
 
@@ -123,21 +123,20 @@ export default function AnalysisDetail({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* ── PREPARATION LOADER ── */}
+      {post && !think && (
+        <div className="flex flex-col items-center justify-center p-12 glass rounded-3xl animate-pulse border border-indigo-500/20">
+           <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-[spin_1.5s_linear_infinite] mb-5" />
+           <p className="text-white/60 text-sm font-medium tracking-widest uppercase">
+             Menyiapkan agen AI dan node penelusuran...
+           </p>
+        </div>
+      )}
+
       {/* ── EXPLORING GRAPH ── */}
-      {(think || (post && !think)) && (
+      {post && think && (
         <ExplorationGraph
-          think={think || {
-            id: "", post_id: id, state: "exploring",
-            information: null, media: null, analysis: null, official: null,
-            media_score: null, analysis_score: null, official_score: null,
-            media_insight: null, official_insight: null, analysis_insight: null,
-            official_url: null, official_name: null,
-            detik: null, kompas: null, inews: null, cnbc: null,
-            detik_insight: null, detik_score: null, detik_url: null,
-            kompas_insight: null, kompas_score: null, kompas_url: null,
-            inews_insight: null, inews_score: null, inews_url: null,
-            cnbc_insight: null, cnbc_score: null, cnbc_url: null
-          }}
+          think={think}
           post={post}
           state={state}
         />

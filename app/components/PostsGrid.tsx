@@ -94,7 +94,7 @@ export default function PostsGrid({ posts }: { posts: Post[] }) {
           <div className="column-header glass" style={{ borderBottom: "2px solid rgba(239,68,68,0.35)" }}>
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 rounded-full bg-red-400 animate-breathe" />
-              <span className="text-red-400">Terdeteksi Hoax</span>
+              <span className="text-red-400">Terdeteksi Hoaks</span>
             </div>
             <div className="text-white/30 text-[10px] font-normal mt-0.5 normal-case tracking-normal">
               {hoaxPosts.length} hasil
@@ -102,7 +102,7 @@ export default function PostsGrid({ posts }: { posts: Post[] }) {
           </div>
           <div className="space-y-3 stagger-children">
             {hoaxPosts.length === 0 ? (
-              <EmptyState emoji="🚫" label="Belum ada analisis hoax" />
+              <EmptyState emoji="🚫" label="Belum ada analisis hoaks" />
             ) : (
               hoaxPosts.map((p, i) => <PostCard key={p.id} post={p} index={i} />)
             )}

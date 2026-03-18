@@ -14,7 +14,7 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
 
   useEffect(() => {
     // When completed, auto-minimize after a brief delay
-    if (isCompleted) {
+    if (state === "completed" || isCompleted) {
       const t = setTimeout(() => {
         setMinimized(true);
       }, 1500);
@@ -22,7 +22,7 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
     } else {
       setMinimized(false);
     }
-  }, [isCompleted]);
+  }, [state, isCompleted]);
 
   if (minimized) {
     return (
@@ -30,8 +30,9 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
         onClick={() => setMinimized(false)}
         className="glass rounded-2xl p-4 cursor-pointer hover:bg-white/5 transition-all text-center animate-fade-in-up border border-indigo-700/40"
       >
-        <span className="text-white/40 text-xs font-semibold tracking-widest uppercase">
-          + Analisis Selesai (Klik untuk melihat riwayat chat AI)
+        <span className="text-white/40 text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2">
+          <span>+</span>
+          Analisis Selesai (Klik untuk melihat riwayat chat AI)
         </span>
       </div>
     );
@@ -86,7 +87,7 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
         {/* Chat bubbles */}
         <div className="flex-1 space-y-6 w-full">
           <ChatBubble
-            name="Sumber Resmi AI"
+            name="Official account statement"
             role="Official API & Journal Scraper"
             message={think.official_insight || "Memproses validasi dari sumber resmi..."}
             color="emerald"
@@ -94,25 +95,49 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
             avatar="🏛️"
           />
           <ChatBubble
-            name="Media Scanner"
+            name="Media : CNBC insight"
             role="News & Social Media Intelligence"
-            message={think.media_insight || "Menganalisis sentimen dan tren pemberitaan media..."}
+            message={think.cnbc_insight || "Menganalisis sentimen dan tren pemberitaan CNBC..."}
+            color="amber"
+            delay={1}
+            avatar="📰"
+          />
+          <ChatBubble
+            name="Media : Detik insight"
+            role="News & Social Media Intelligence"
+            message={think.detik_insight || "Menganalisis sentimen dan tren pemberitaan Detik..."}
             color="amber"
             delay={2}
             avatar="📰"
           />
           <ChatBubble
-            name="Logic Core Evaluator"
+            name="Media : Kompas insight"
+            role="News & Social Media Intelligence"
+            message={think.kompas_insight || "Menganalisis sentimen dan tren pemberitaan Kompas..."}
+            color="amber"
+            delay={3}
+            avatar="📰"
+          />
+          <ChatBubble
+            name="Media : iNews insight"
+            role="News & Social Media Intelligence"
+            message={think.inews_insight || "Menganalisis sentimen dan tren pemberitaan iNews..."}
+            color="amber"
+            delay={4}
+            avatar="📰"
+          />
+          <ChatBubble
+            name="General Knowledge evaluator"
             role="Deep Logic & Context Engine"
             message={think.analysis_insight || "Menggabungkan temuan dan mengevaluasi probabilitas kebenaran klaim..."}
             color="purple"
-            delay={4}
+            delay={5}
             avatar="🧠"
           />
         </div>
 
         {/* Analyzing GIF */}
-        {!isCompleted && (
+        {state !== "completed" && !isCompleted && (
           <div className="shrink-0 animate-fade-in-up flex flex-col items-center gap-3">
             <div className="p-2 rounded-2xl bg-black/40 border border-indigo-500/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
