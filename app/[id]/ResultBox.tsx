@@ -49,6 +49,19 @@ export default function ResultBox({ post }: { post: Post }) {
   const conf = post.confidence || 0;
   const pct = Math.abs(conf);
 
+  const isUncertainOrBorderline = result === "uncertain" || (conf > -70 && conf < 70);
+  let leaningLabel = null;
+  let leaningColor = "";
+  if (isUncertainOrBorderline && conf !== 0) {
+    if (conf > 0) {
+      leaningLabel = "Mengarah ke Valid";
+      leaningColor = config.valid.textClass;
+    } else {
+      leaningLabel = "Mengarah ke Hoaks";
+      leaningColor = config.hoax.textClass;
+    }
+  }
+
   return (
     <div className={`relative rounded-3xl p-8 md:p-12 overflow-hidden animate-fade-in-up shadow-2xl bg-gradient-to-br ${c.bgClass} border ${c.borderClass}`}>
       {/* Tape effect if hoax */}
@@ -94,6 +107,12 @@ export default function ResultBox({ post }: { post: Post }) {
               </span>
             </div>
           </div>
+
+          {leaningLabel && (
+            <div className={`mt-3 px-3 py-1 rounded-full bg-black/20 border border-white/10 text-[10px] font-bold tracking-wider uppercase ${leaningColor} animate-fade-in-up`}>
+              <span className="opacity-70 mr-1">↳</span> {leaningLabel}
+            </div>
+          )}
         </div>
 
         {/* Right: Summary & Details */}
