@@ -38,11 +38,9 @@ export default async function Home() {
         <header className="text-center mb-8 animate-fade-in-down">
           <div className="inline-flex items-center justify-center mb-5">
             <div className="relative">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse-glow">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse-glow overflow-hidden bg-black/20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="NusaVerify Logo" width={375} height={376} className="w-full h-full object-cover" />
               </div>
               <div className="absolute -inset-2 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-xl -z-10 animate-breathe" />
             </div>
@@ -50,7 +48,7 @@ export default async function Home() {
 
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
             <span className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-transparent animate-gradient-shift">
-              NusaValid
+              NusaVerify
             </span>
           </h1>
           <p className="mt-2 text-white/40 text-sm sm:text-base font-medium max-w-lg mx-auto">
@@ -82,7 +80,7 @@ export default async function Home() {
         <footer className="mt-16 text-center pb-8 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
           <div className="glass rounded-2xl p-4 max-w-sm mx-auto">
             <p className="text-white/20 text-[10px]">Powered by AI Multi-Source Analysis Engine</p>
-            <p className="text-white/10 text-[9px] mt-1">© 2026 NusaValid — Hackathon BI</p>
+            <p className="text-white/10 text-[9px] mt-1">© 2026 NusaVerify — Hackathon BI</p>
           </div>
         </footer>
       </div>

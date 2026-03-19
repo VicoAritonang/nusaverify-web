@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     };
 
     const webhookUrl = process.env.MAIN_AGENT_WEBHOOK_URL;
-    const apiKey = process.env["X-API-KEY"];
+    const apiKey = process.env.X_API_KEY;
 
     if (!webhookUrl || !apiKey) {
       return NextResponse.json(

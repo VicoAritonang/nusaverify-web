@@ -194,19 +194,25 @@ export default function PostCard({ post, index }: { post: Post; index: number })
             <div className="flex items-center gap-1.5">
               {/* micro gauge */}
               <svg width="28" height="28" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3"/>
+                <circle 
+                  cx="18" cy="18" r="15" fill="none" 
+                  stroke="rgba(255,255,255,0.07)" strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray="70.69 94.25"
+                  style={{ transform: 'rotate(135deg)', transformOrigin: '50% 50%' }}
+                />
                 <circle
                   cx="18" cy="18" r="15" fill="none"
                   stroke={cfg.iconColor}
                   strokeWidth="3"
-                  strokeDasharray={`${(Math.abs(post.confidence) / 100) * 94} 94`}
+                  strokeDasharray={`${(Math.abs(post.confidence) / 100) * 70.69} 94.25`}
                   strokeLinecap="round"
-                  strokeDashoffset="23.5"
+                  style={{ transform: 'rotate(135deg)', transformOrigin: '50% 50%', transition: 'stroke-dasharray 1s ease' }}
                   opacity="0.85"
                 />
               </svg>
               <span className={`text-[12px] font-mono font-extrabold ${cfg.textColor}`}>
-                {post.confidence > 0 ? "+" : ""}{post.confidence}
+                {Math.round(Math.abs(post.confidence))}%
               </span>
             </div>
           )}

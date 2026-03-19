@@ -15,10 +15,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NusaValid — AI-Powered Fact Checker",
+  title: "NusaVerify — AI-Powered Fact Checker",
   description:
-    "Verify any claim, news, or statement with AI-powered multi-source analysis. NusaValid cross-references trusted sources to deliver confidence-scored verdicts.",
-  keywords: ["fact check", "AI", "hoax detection", "NusaValid", "misinformation"],
+    "Verify any claim, news, or statement with AI-powered multi-source analysis. NusaVerify cross-references trusted sources to deliver confidence-scored verdicts.",
+  keywords: ["fact check", "AI", "hoax detection", "NusaVerify", "misinformation"],
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

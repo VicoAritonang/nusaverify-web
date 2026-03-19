@@ -67,15 +67,22 @@ export default function ResultBox({ post }: { post: Post }) {
           
           <div className="relative">
             <svg width="120" height="120" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+              {/* Background circle track (75% circle, rotated to open at bottom) */}
+              <circle 
+                cx="60" cy="60" r="54" fill="none" 
+                stroke="rgba(255,255,255,0.05)" strokeWidth="8" 
+                strokeLinecap="round"
+                strokeDasharray="254.46 339.29"
+                style={{ transform: 'rotate(135deg)', transformOrigin: '50% 50%' }}
+              />
+              {/* Foreground circle indicator (mapped over the 75% track) */}
               <circle 
                 cx="60" cy="60" r="54" fill="none" 
                 stroke="currentColor" strokeWidth="8" 
                 className={c.textClass}
-                strokeDasharray={`${(pct / 100) * 339.29} 339.29`}
                 strokeLinecap="round"
-                strokeDashoffset="84.82" // Start from top
-                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dasharray 1.5s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                strokeDasharray={`${(pct / 100) * 254.46} 339.29`}
+                style={{ transform: 'rotate(135deg)', transformOrigin: '50% 50%', transition: 'stroke-dasharray 1.5s cubic-bezier(0.16, 1, 0.3, 1)' }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
