@@ -40,7 +40,7 @@ export default async function Home() {
             <div className="relative">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse-glow overflow-hidden bg-black/20">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="NusaVerify Logo" width={375} height={376} className="w-full h-full object-cover" />
+                <img src="/logo.png" alt="NusaVerify Logo" width={1024} height={1024} className="w-full h-full object-cover" />
               </div>
               <div className="absolute -inset-2 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-xl -z-10 animate-breathe" />
             </div>
