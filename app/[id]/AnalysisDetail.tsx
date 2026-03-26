@@ -6,6 +6,7 @@ import { Post, Think } from "@/lib/types";
 import ExplorationGraph from "./ExplorationGraph";
 import AnalyzingBox from "./AnalyzingBox";
 import ResultBox from "./ResultBox";
+import InstagramPreview from "./InstagramPreview";
 
 export default function AnalysisDetail({ id }: { id: string }) {
   const [post, setPost] = useState<Post | null>(null);
@@ -92,6 +93,10 @@ export default function AnalysisDetail({ id }: { id: string }) {
   const state = think?.state || "exploring";
   const isCompleted = state === "completed" || post.result != null;
 
+  const isInstagramUrl = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\//.test(
+    post.context?.trim() || ""
+  );
+
   return (
     <div className="space-y-8 animate-fade-in-up">
       {/* ── HEADER ── */}
@@ -115,11 +120,15 @@ export default function AnalysisDetail({ id }: { id: string }) {
               </span>
             )}
           </div>
-          <blockquote className="pl-4 border-l-2 border-indigo-500/50">
-            <p className="text-white/50 text-sm leading-relaxed italic">
-              &ldquo;{post.context}&rdquo;
-            </p>
-          </blockquote>
+          {isInstagramUrl ? (
+            <InstagramPreview url={post.context.trim()} />
+          ) : (
+            <blockquote className="pl-4 border-l-2 border-indigo-500/50">
+              <p className="text-white/50 text-sm leading-relaxed italic">
+                &ldquo;{post.context}&rdquo;
+              </p>
+            </blockquote>
+          )}
         </div>
       </div>
 

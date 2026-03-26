@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 
 export default function InputForm() {
   const [context, setContext] = useState("");
@@ -37,17 +36,16 @@ export default function InputForm() {
   const handleSubmit = async () => {
     if (!canSubmit) { setError("Masukkan teks atau gambar untuk dianalisis"); return; }
     setIsSubmitting(true); setError(null);
-    const id = uuidv4();
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, context: context.trim(), image }),
+        body: JSON.stringify({ context: context.trim(), image }),
       });
       const data = await res.json();
       
       if (data.status === "exist" || data.status === "initialized") {
-        router.push(`/${data.post_id || id}`);
+        router.push(`/${data.post_id}`);
       } else if (data.status === "unauthorized") {
         setError("API Key tidak valid (Unauthorized).");
         setIsSubmitting(false);
