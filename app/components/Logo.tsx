@@ -1,24 +1,27 @@
 export default function Logo({ size = 36 }: { size?: number }) {
+  const radius = Math.round(size * 0.3);
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      {/* breathing halo */}
-      <div
-        className="absolute -inset-2 rounded-2xl breathe -z-10"
+    <span
+      className="relative inline-block shrink-0 overflow-hidden"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        background: "#0a0a0c",
+        boxShadow:
+          "inset 0 0 0 1px rgba(255,255,255,.16), 0 1px 1px rgba(0,0,0,.4), 0 6px 18px -6px rgba(0,0,0,.8)",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="NusaVerify" className="h-full w-full object-cover" style={{ transform: "scale(1.12)" }} />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
         style={{
-          background: "linear-gradient(135deg, rgba(99,102,241,.35), rgba(139,92,246,.35))",
-          filter: "blur(14px)",
+          borderRadius: radius,
+          background: "linear-gradient(160deg, rgba(255,255,255,.22), transparent 40%)",
         }}
       />
-      <div
-        className="relative w-full h-full rounded-xl overflow-hidden ring-1 ring-white/15"
-        style={{
-          background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #22d3ee 100%)",
-          boxShadow: "0 6px 18px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.2)",
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="NusaVerify" className="w-full h-full object-cover" />
-      </div>
-    </div>
+    </span>
   );
 }

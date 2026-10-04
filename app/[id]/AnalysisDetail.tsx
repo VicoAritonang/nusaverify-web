@@ -7,55 +7,71 @@ import { supabase } from "@/lib/supabase";
 import { Post, Think } from "@/lib/types";
 import { RESULT_META, resultOf, CLAIM_TYPES } from "@/lib/investmentData";
 import { AssetClassChip, TickerChip, SectorChip, SentimentBadge, RiskMeter } from "../components/Chips";
+import Logo from "../components/Logo";
 import AnalyzingBox from "./AnalyzingBox";
 import ResultBox from "./ResultBox";
 import InstagramPreview from "./InstagramPreview";
+
+function Spinner({ size = 56 }: { size?: number }) {
+  return (
+    <span style={{ position: "relative", width: size, height: size, display: "inline-block" }}>
+      <span
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: "50%",
+          border: "2px solid rgba(233,200,145,.16)",
+          borderTopColor: "var(--champagne)",
+          animation: "spinSlow 1.1s linear infinite",
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          inset: size * 0.2,
+          borderRadius: "50%",
+          border: "2px solid transparent",
+          borderLeftColor: "var(--sapphire-2)",
+          animation: "spinSlow 1.8s linear infinite reverse",
+        }}
+      />
+    </span>
+  );
+}
 
 // Canvas relies on `window` at import time → load it client-only.
 const ExplorationGraph = dynamic(() => import("./ExplorationGraph"), {
   ssr: false,
   loading: () => (
-    <div className="graph-shell corner-marks fade-in-up" style={{ height: "76vh", minHeight: 560, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div className="relative" style={{ width: 56, height: 56 }}>
-        <div className="absolute inset-0 rounded-full" style={{ border: "2px solid rgba(99,102,241,.2)", animation: "spinSlow 3s linear infinite" }} />
-        <div className="absolute" style={{ inset: 8, borderRadius: "50%", border: "2px solid transparent", borderTopColor: "#818cf8", animation: "spinSlow 1.2s linear infinite" }} />
-      </div>
+    <div className="graph-shell fade-in-up" style={{ height: "76vh", minHeight: 560, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Spinner />
     </div>
   ),
 });
 
 // ── Top bar ────────────────────────────────────────────────────────
 function DetailTopBar({ state, postId }: { state: string; postId: string }) {
-  const label = state === "exploring" ? "EXPLORING" : state === "analyzing" ? "ANALYZING" : "COMPLETED";
-  const color = state === "completed" ? "#34d399" : "#a5b4fc";
+  const label = state === "exploring" ? "Menelusuri sumber" : state === "analyzing" ? "Menganalisis" : "Selesai";
+  const done = state === "completed";
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0" }}>
-      <Link href="/" className="btn-ghost">
+    <div
+      className="lg lg-pill fade-in-down"
+      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 6, marginBottom: 20, position: "sticky", top: 14, zIndex: 40 }}
+    >
+      <Link href="/" className="btn-ghost" style={{ paddingLeft: 10 }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        Kembali ke Beranda
+        <Logo size={22} />
+        <span className="hidden sm:inline">Beranda</span>
       </Link>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span className={state === "completed" ? "" : "blink"} style={{ width: 6, height: 6, borderRadius: "50%", background: color, boxShadow: `0 0 10px ${color}99` }} />
-          <span className="mono up" style={{ fontSize: 10, color, letterSpacing: ".15em", fontWeight: 700 }}>
-            LIVE TRACE · {label}
-          </span>
-        </div>
-        <span
-          className="mono"
-          style={{
-            fontSize: 10,
-            padding: "3px 8px",
-            borderRadius: 6,
-            background: "rgba(255,255,255,.03)",
-            border: "1px solid rgba(255,255,255,.08)",
-            color: "rgba(255,255,255,.4)",
-            letterSpacing: ".05em",
-          }}
-        >
-          ID·{postId.slice(0, 8).toUpperCase()}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 10 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {done ? <span className="dot-bull" /> : <span className="live-dot" style={{ background: "var(--champagne)" }} />}
+          <span style={{ fontSize: 13, fontWeight: 500, color: done ? "#6ee7b7" : "var(--champagne-2)" }}>{label}</span>
+        </span>
+        <span className="mono hidden sm:inline" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>
+          #{postId.slice(0, 8).toUpperCase()}
         </span>
       </div>
     </div>
@@ -66,7 +82,7 @@ function DetailTopBar({ state, postId }: { state: string; postId: string }) {
 function Stepper({ state }: { state: string }) {
   const steps = [
     { key: "exploring", label: "Eksplorasi" },
-    { key: "analyzing", label: "Analisis Silang" },
+    { key: "analyzing", label: "Analisis silang" },
     { key: "completed", label: "Selesai" },
   ];
   const idx = state === "exploring" ? 0 : state === "analyzing" ? 1 : 2;
@@ -76,7 +92,7 @@ function Stepper({ state }: { state: string }) {
         <div key={s.key} style={{ display: "contents" }}>
           <div className={`step ${i < idx ? "done" : i === idx ? "active" : ""}`}>
             <span className="step-dot" />
-            {i < idx ? "✓ " : `${String(i + 1).padStart(2, "0")} `}
+            {i < idx ? "✓ " : ""}
             {s.label}
           </div>
           {i < steps.length - 1 && <div className={`step-bar ${i < idx ? "done" : ""}`} />}
@@ -93,34 +109,23 @@ function DetailHeader({ post, state }: { post: Post; state: string }) {
   const claim = post.claim_type ? CLAIM_TYPES[post.claim_type] : null;
 
   return (
-    <div className="glass-elev corner-marks fade-in-up" style={{ borderRadius: 22, padding: 26, position: "relative", overflow: "hidden" }}>
+    <div className="lg lg-dense fade-in-up" style={{ borderRadius: 32, padding: "30px 32px", overflow: "hidden" }}>
       <div
         style={{
           position: "absolute",
-          top: -40,
-          right: -40,
-          width: 320,
-          height: 320,
+          top: -80,
+          right: -80,
+          width: 360,
+          height: 360,
           borderRadius: "50%",
-          background: `radial-gradient(circle, ${m.color}11, transparent 70%)`,
+          background: `radial-gradient(circle, ${m.color}18, transparent 70%)`,
           pointerEvents: "none",
         }}
       />
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-          <span
-            className="chip up"
-            style={{
-              fontSize: 9.5,
-              padding: "3px 9px",
-              letterSpacing: ".15em",
-              background: "rgba(99,102,241,.13)",
-              border: "1px solid rgba(99,102,241,.3)",
-              color: "#c7d2fe",
-            }}
-          >
-            <span className="dot-bull blink" style={{ background: "#a5b4fc", boxShadow: "0 0 6px rgba(165,180,252,.6)" }} />
-            VERIFICATION TRACE
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+          <span className="eyebrow" style={{ marginRight: 6 }}>
+            Jejak verifikasi
           </span>
           <AssetClassChip assetClass={post.asset_class} />
           <TickerChip ticker={post.ticker} assetClass={post.asset_class} />
@@ -128,35 +133,23 @@ function DetailHeader({ post, state }: { post: Post; state: string }) {
           <SentimentBadge sentiment={post.sentiment} />
           <RiskMeter level={post.risk_level} />
           {claim && (
-            <span
-              className="chip"
-              style={{
-                background: "rgba(255,255,255,.04)",
-                border: "1px solid rgba(255,255,255,.1)",
-                color: "rgba(255,255,255,.55)",
-                fontSize: 10,
-                letterSpacing: ".05em",
-                textTransform: "none",
-              }}
-            >
+            <span className="chip chip-sector">
               {claim.icon} {claim.label}
             </span>
           )}
         </div>
 
-        <h1 style={{ margin: "0 0 14px", fontSize: "clamp(22px, 2.6vw, 30px)", fontWeight: 800, letterSpacing: "-.015em", color: "#fff", lineHeight: 1.2 }}>
-          {post.title || "Analisis Berjalan…"}
+        <h1 className="h-display" style={{ margin: "0 0 16px", fontSize: "clamp(26px, 3.4vw, 42px)", color: "var(--fg)" }}>
+          {post.title || "Analisis berjalan…"}
         </h1>
 
         {isInstagram ? (
-          <div style={{ marginBottom: 18 }}>
+          <div style={{ marginBottom: 20 }}>
             <InstagramPreview url={post.context.trim()} />
           </div>
         ) : (
-          <blockquote style={{ margin: "0 0 18px", paddingLeft: 14, borderLeft: `2px solid ${m.color}55` }}>
-            <p style={{ margin: 0, color: "rgba(255,255,255,.55)", fontSize: 13.5, lineHeight: 1.55, fontStyle: "italic" }}>
-              &ldquo;{post.context}&rdquo;
-            </p>
+          <blockquote style={{ margin: "0 0 22px", paddingLeft: 16, borderLeft: `2px solid ${m.color}66` }}>
+            <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 15, lineHeight: 1.6 }}>&ldquo;{post.context}&rdquo;</p>
           </blockquote>
         )}
 
@@ -224,14 +217,15 @@ export default function AnalysisDetail({ id }: { id: string }) {
     return (
       <>
         <DetailTopBar state="completed" postId={id} />
-        <div className="glass-elev fade-in-up" style={{ borderRadius: 24, padding: 48, textAlign: "center", marginTop: 18 }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-          <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 800, color: "#fff" }}>Klaim tidak ditemukan</h2>
-          <p style={{ margin: "0 0 20px", fontSize: 13, color: "rgba(255,255,255,.45)" }}>
-            Trace dengan ID ini tidak tersedia atau telah kedaluwarsa.
+        <div className="lg lg-dense fade-in-up" style={{ borderRadius: 32, padding: "56px 28px", textAlign: "center", marginTop: 18 }}>
+          <h2 className="h-display" style={{ margin: "0 0 10px", fontSize: 28 }}>
+            Klaim tidak ditemukan
+          </h2>
+          <p style={{ margin: "0 auto 24px", fontSize: 14.5, color: "var(--fg-3)", maxWidth: 380 }}>
+            Jejak dengan ID ini tidak tersedia atau sudah kedaluwarsa. Kirim ulang klaimnya dari beranda.
           </p>
-          <Link href="/" className="btn-primary" style={{ display: "inline-flex" }}>
-            Kembali ke Beranda
+          <Link href="/#cek" className="btn-pearl">
+            Cek klaim baru
           </Link>
         </div>
       </>
@@ -243,19 +237,11 @@ export default function AnalysisDetail({ id }: { id: string }) {
     return (
       <>
         <DetailTopBar state="exploring" postId={id} />
-        <div className="flex flex-col items-center justify-center" style={{ minHeight: "60vh" }}>
-          <div className="relative" style={{ width: 80, height: 80, marginBottom: 24 }}>
-            <div className="absolute inset-0 rounded-full" style={{ border: "2px solid rgba(99,102,241,.2)", animation: "spinSlow 3s linear infinite" }} />
-            <div className="absolute" style={{ inset: 8, borderRadius: "50%", border: "2px solid transparent", borderTopColor: "#818cf8", animation: "spinSlow 1.5s linear infinite" }} />
-            <div className="absolute" style={{ inset: 20, borderRadius: "50%", border: "2px solid transparent", borderLeftColor: "#22d3ee", animation: "spinSlow 2s linear infinite reverse" }} />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="breathe" style={{ width: 12, height: 12, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#22d3ee)", boxShadow: "0 0 20px rgba(99,102,241,.7)" }} />
-            </div>
-          </div>
-          <p className="mono up" style={{ fontSize: 11, color: "rgba(255,255,255,.5)", letterSpacing: ".2em" }}>Menyiapkan analisis…</p>
-          <p className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,.25)", marginTop: 8, letterSpacing: ".15em" }}>ID · {id.slice(0, 12)}</p>
+        <div className="flex flex-col items-center justify-center" style={{ minHeight: "60vh", gap: 20 }}>
+          <Spinner size={64} />
+          <p style={{ margin: 0, fontSize: 15, color: "var(--fg-2)" }}>Menyiapkan analisis…</p>
           {fetchError && (
-            <div style={{ marginTop: 16, padding: "8px 14px", borderRadius: 12, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.25)", color: "#fca5a5", fontSize: 12 }}>
+            <div style={{ padding: "10px 16px", borderRadius: 16, background: "rgba(239,68,68,.1)", boxShadow: "inset 0 0 0 1px rgba(239,68,68,.25)", color: "#fca5a5", fontSize: 13 }}>
               {fetchError}
             </div>
           )}
@@ -270,25 +256,14 @@ export default function AnalysisDetail({ id }: { id: string }) {
   return (
     <>
       <DetailTopBar state={isCompleted ? "completed" : state} postId={id} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 18 }} className="fade-in-up">
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }} className="fade-in-up">
         <DetailHeader post={post} state={isCompleted ? "completed" : state} />
 
         {/* Preparation loader (post exists, think not yet) */}
         {!think && (
-          <div className="glass-elev fade-in-up" style={{ borderRadius: 24, padding: 48, display: "flex", flexDirection: "column", alignItems: "center", border: "1px solid rgba(99,102,241,.2)" }}>
-            <div className="relative" style={{ width: 64, height: 64, marginBottom: 20 }}>
-              <div className="absolute inset-0 rounded-full" style={{ border: "2px solid rgba(99,102,241,.2)", animation: "spinSlow 3s linear infinite" }} />
-              <div className="absolute" style={{ inset: 8, borderRadius: "50%", border: "2px solid transparent", borderTopColor: "#818cf8", animation: "spinSlow 1.2s linear infinite" }} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="breathe" style={{ width: 10, height: 10, borderRadius: "50%", background: "#818cf8" }} />
-              </div>
-            </div>
-            <p className="up" style={{ fontSize: 13, color: "rgba(255,255,255,.65)", letterSpacing: ".15em", fontWeight: 600 }}>
-              Menyiapkan agen AI dan node penelusuran
-            </p>
-            <p className="mono up" style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginTop: 8, letterSpacing: ".2em" }}>
-              Booting neural network
-            </p>
+          <div className="lg lg-dense fade-in-up" style={{ borderRadius: 32, padding: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+            <Spinner />
+            <p style={{ margin: 0, fontSize: 15, color: "var(--fg-2)" }}>Menyiapkan agen dan node penelusuran</p>
           </div>
         )}
 

@@ -2,18 +2,18 @@ import { MOOD_INDEX, WATCHLIST, ASSET_CLASS_COLORS } from "@/lib/investmentData"
 import { CountUp } from "./Viz";
 
 const SEGMENTS = [
-  { from: 0, to: 25, color: "#ef4444", label: "Extreme Fear" },
+  { from: 0, to: 25, color: "#ef4444", label: "Extreme fear" },
   { from: 25, to: 45, color: "#f59e0b", label: "Fear" },
-  { from: 45, to: 55, color: "#a3a3a3", label: "Neutral" },
+  { from: 45, to: 55, color: "#a3a3a3", label: "Netral" },
   { from: 55, to: 75, color: "#10b981", label: "Greed" },
-  { from: 75, to: 100, color: "#34d399", label: "Extreme Greed" },
+  { from: 75, to: 100, color: "#34d399", label: "Extreme greed" },
 ];
 
 function MoodMeter() {
   const value = MOOD_INDEX.value;
-  const r = 64;
-  const cx = 80;
-  const cy = 80;
+  const r = 84;
+  const cx = 100;
+  const cy = 100;
   const start = Math.PI;
   const end = 2 * Math.PI;
   const angle = start + (end - start) * (value / 100);
@@ -21,53 +21,53 @@ function MoodMeter() {
   const py = cy + r * Math.sin(angle);
 
   const arcPath = (fromPct: number, toPct: number) => {
-    const a0 = start + (end - start) * (fromPct / 100);
-    const a1 = start + (end - start) * (toPct / 100);
+    const gap = 1.2;
+    const a0 = start + (end - start) * ((fromPct + (fromPct === 0 ? 0 : gap / 2)) / 100);
+    const a1 = start + (end - start) * ((toPct - (toPct === 100 ? 0 : gap / 2)) / 100);
     const x0 = cx + r * Math.cos(a0);
     const y0 = cy + r * Math.sin(a0);
     const x1 = cx + r * Math.cos(a1);
     const y1 = cy + r * Math.sin(a1);
-    const large = a1 - a0 > Math.PI ? 1 : 0;
-    return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large} 1 ${x1.toFixed(2)},${y1.toFixed(2)}`;
+    return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 0 1 ${x1.toFixed(2)},${y1.toFixed(2)}`;
   };
 
   const seg = SEGMENTS.find((s) => value >= s.from && value < s.to) ?? SEGMENTS[3];
 
   return (
-    <div
-      className="glass-elev corner-marks"
-      style={{ borderRadius: 18, padding: "14px 18px", display: "flex", alignItems: "center", gap: 18, minWidth: 0 }}
-    >
-      <svg width="160" height="92" viewBox="0 0 160 92" className="shrink-0">
-        {SEGMENTS.map((s, i) => (
-          <path key={i} d={arcPath(s.from, s.to)} stroke={s.color} strokeWidth="8" fill="none" strokeLinecap="butt" opacity="0.55" />
-        ))}
-        <line
-          x1={cx}
-          y1={cy}
-          x2={px}
-          y2={py}
-          stroke="#fff"
-          strokeWidth="2"
-          strokeLinecap="round"
-          style={{ transition: "all 1.2s cubic-bezier(.16,1,.3,1)" }}
-        />
-        <circle cx={cx} cy={cy} r="4" fill="#fff" />
-        <circle cx={px} cy={py} r="5" fill={seg.color} stroke="#fff" strokeWidth="1.5" />
-      </svg>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="label-tech">Market Mood · Indeks Fear/Greed</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
-          <span className="mono" style={{ fontSize: 28, fontWeight: 800, color: seg.color, lineHeight: 1 }}>
+    <div className="lg lg-dense" style={{ borderRadius: 32, padding: 28, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 24 }}>
+      <div>
+        <div className="eyebrow">Sentimen lintas-aset</div>
+        <div style={{ fontSize: 14, color: "var(--fg-3)", marginTop: 6 }}>Indeks fear / greed · contoh data</div>
+      </div>
+      <div style={{ position: "relative", width: "100%", maxWidth: 300, margin: "0 auto" }}>
+        <svg viewBox="0 0 200 112" width="100%" style={{ display: "block", overflow: "visible" }}>
+          {SEGMENTS.map((s, i) => (
+            <path key={i} d={arcPath(s.from, s.to)} stroke={s.color} strokeWidth="10" fill="none" strokeLinecap="round" opacity={s === seg ? 0.95 : 0.3} />
+          ))}
+          <circle cx={px} cy={py} r="9" fill="var(--ink)" stroke="#fff" strokeWidth="2.5" />
+          <circle cx={px} cy={py} r="3.5" fill={seg.color} />
+        </svg>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, textAlign: "center" }}>
+          <div className="h-display" style={{ fontSize: 52, lineHeight: 1, color: "var(--fg)" }}>
             <CountUp to={value} duration={1400} />
-          </span>
-          <span className="up" style={{ fontSize: 11, fontWeight: 700, color: seg.color, letterSpacing: ".1em" }}>
-            {seg.label}
-          </span>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: seg.color, marginTop: 4 }}>{seg.label}</div>
         </div>
-        <div style={{ color: "rgba(255,255,255,.4)", fontSize: 11, marginTop: 4, lineHeight: 1.4 }}>
-          Sentimen lintas-aset global · diperbarui &lt;1 menit lalu
-        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px" }}>
+        {MOOD_INDEX.components.map((c) => (
+          <div key={c.name}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--fg-3)", gap: 8 }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+              <span className="mono" style={{ color: "var(--fg-2)" }}>
+                {c.value}
+              </span>
+            </div>
+            <div style={{ height: 3, borderRadius: 3, background: "rgba(255,255,255,.07)", marginTop: 6 }}>
+              <div style={{ width: `${c.value}%`, height: "100%", borderRadius: 3, background: "linear-gradient(90deg, var(--champagne-3), var(--champagne-2))" }} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -75,56 +75,55 @@ function MoodMeter() {
 
 function Watchlist() {
   return (
-    <div className="glass-elev corner-marks" style={{ borderRadius: 18, padding: 14 }}>
-      <div
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, padding: "0 4px" }}
-      >
-        <div className="label-tech">Most-Verified · Lintas-Aset · 24j</div>
-        <span className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>
-          TOP 7
-        </span>
+    <div className="lg lg-dense" style={{ borderRadius: 32, padding: "24px 18px 14px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "0 10px 12px" }}>
+        <div>
+          <div className="eyebrow">Paling banyak dicek · 24 jam</div>
+          <div style={{ fontSize: 14, color: "var(--fg-3)", marginTop: 6 }}>Porsi valid vs hoaks per instrumen</div>
+        </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         {WATCHLIST.map((it) => {
+          const validPct = Math.round((it.valid / it.checks) * 100);
           const hoaxPct = Math.round((it.hoax / it.checks) * 100);
           const danger = hoaxPct > 50;
-          const cls = ASSET_CLASS_COLORS[it.cls] || "#a5b4fc";
+          const cls = ASSET_CLASS_COLORS[it.cls] || "#9db8ff";
           return (
             <div key={it.t} className="watchlist-item">
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "0 1 auto" }}>
                 <span
-                  style={{ width: 4, height: 16, borderRadius: 2, background: cls, boxShadow: `0 0 6px ${cls}aa`, flexShrink: 0 }}
-                />
-                <span className="chip-ticker" style={{ fontSize: 10.5, padding: "2px 7px" }}>
-                  <span style={{ opacity: 0.5 }}>$</span>
-                  {it.t}
-                </span>
-                <span className="mono up" style={{ fontSize: 8.5, color: cls, letterSpacing: ".1em", fontWeight: 600 }}>
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: `${cls}14`,
+                    boxShadow: `inset 0 0 0 1px ${cls}30`,
+                    color: cls,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    flexShrink: 0,
+                  }}
+                  className="mono"
+                >
                   {it.cls.slice(0, 3).toUpperCase()}
                 </span>
-                <span className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,.35)" }}>
-                  {it.checks}×
+                <span style={{ minWidth: 0 }}>
+                  <span className="mono" style={{ display: "block", fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>
+                    {it.t}
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: "var(--fg-4)" }}>{it.checks} kali dicek</span>
                 </span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div
-                  style={{
-                    width: 50,
-                    height: 5,
-                    borderRadius: 3,
-                    background: "rgba(255,255,255,.06)",
-                    overflow: "hidden",
-                    display: "flex",
-                  }}
-                >
-                  <div style={{ width: `${(it.valid / it.checks) * 100}%`, background: "#34d399" }} />
-                  <div style={{ width: `${(it.hoax / it.checks) * 100}%`, background: "#f87171" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 auto", justifyContent: "flex-end" }}>
+                <div style={{ width: "min(160px, 30vw)", height: 6, borderRadius: 6, background: "rgba(255,255,255,.06)", overflow: "hidden", display: "flex", gap: 2 }}>
+                  <div style={{ width: `${validPct}%`, background: "#34d399", borderRadius: 6 }} />
+                  <div style={{ width: `${hoaxPct}%`, background: "#f87171", borderRadius: 6 }} />
                 </div>
-                <span
-                  className="mono"
-                  style={{ fontSize: 10, fontWeight: 700, color: danger ? "#fca5a5" : "#6ee7b7", width: 32, textAlign: "right" }}
-                >
-                  {danger ? `${hoaxPct}%` : `${Math.round((it.valid / it.checks) * 100)}%`}
+                <span className="mono" style={{ fontSize: 12.5, fontWeight: 600, color: danger ? "#fca5a5" : "#6ee7b7", width: 74, textAlign: "right" }}>
+                  {danger ? `${hoaxPct}% hoaks` : `${validPct}% valid`}
                 </span>
               </div>
             </div>
@@ -137,10 +136,7 @@ function Watchlist() {
 
 export default function MarketPulse() {
   return (
-    <div
-      className="fade-in-up market-pulse-grid"
-      style={{ display: "grid", gap: 14, marginBottom: 24 }}
-    >
+    <div className="market-pulse-grid">
       <MoodMeter />
       <Watchlist />
     </div>

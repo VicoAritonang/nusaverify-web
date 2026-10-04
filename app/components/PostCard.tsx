@@ -12,9 +12,9 @@ function getRelativeTime(dateStr: string): string {
   const hr = Math.floor(min / 60);
   const day = Math.floor(hr / 24);
   if (min < 1) return "baru saja";
-  if (min < 60) return `${min}m lalu`;
-  if (hr < 24) return `${hr}j lalu`;
-  if (day < 7) return `${day}h lalu`;
+  if (min < 60) return `${min} mnt lalu`;
+  if (hr < 24) return `${hr} jam lalu`;
+  if (day < 7) return `${day} hari lalu`;
   return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
@@ -22,7 +22,6 @@ export default function PostCard({ post, index = 0 }: { post: Post; index?: numb
   const router = useRouter();
   const r = resultOf(post.result);
   const m = RESULT_META[r];
-  const sparkColor = m.color;
   const conf = Math.round(Math.abs(post.confidence ?? 0));
 
   return (
@@ -40,106 +39,62 @@ export default function PostCard({ post, index = 0 }: { post: Post; index?: numb
       {r === "hoax" && <div className="card-hoax-tape" />}
       <div className={`card-top-glow ${m.glow}`} />
       <div className="inner">
-        {/* TOP ROW */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: `${m.labelColor}22`,
-              border: `1px solid ${m.labelColor}40`,
-              color: m.color,
-              fontWeight: 800,
-              fontSize: 14,
-              flexShrink: 0,
-            }}
-          >
-            {m.icon}
-          </div>
-          <h3
-            className="line-clamp-2"
-            style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.35 }}
-          >
-            {post.title || "Analisis Tanpa Judul"}
-          </h3>
-        </div>
-
-        {/* CHIPS ROW */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-          <span
-            className="chip up"
-            style={{
-              background: `${m.labelColor}1f`,
-              border: `1px solid ${m.labelColor}40`,
-              color: m.color,
-              fontSize: 9.5,
-            }}
-          >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+          <span className="chip" style={{ background: `${m.labelColor}1c`, boxShadow: `inset 0 0 0 1px ${m.labelColor}40`, color: m.color }}>
             {m.icon} {m.label}
           </span>
+          <span className="mono" style={{ fontSize: 11, color: "var(--fg-4)" }}>
+            {getRelativeTime(post.updated_at)}
+          </span>
+        </div>
+
+        <h3
+          className="line-clamp-2"
+          style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 600, color: "var(--fg)", lineHeight: 1.35, letterSpacing: "-.005em" }}
+        >
+          {post.title || "Analisis tanpa judul"}
+        </h3>
+
+        {post.summary && (
+          <p className="line-clamp-2" style={{ color: "var(--fg-3)", fontSize: 13.5, lineHeight: 1.55, margin: "0 0 14px" }}>
+            {post.summary}
+          </p>
+        )}
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
           <AssetClassChip assetClass={post.asset_class} />
           <TickerChip ticker={post.ticker} assetClass={post.asset_class} />
           <SentimentBadge sentiment={post.sentiment} withLabel={false} />
           <SectorChip sector={post.sector ?? post.category} />
         </div>
 
-        {/* SUMMARY */}
-        {post.summary && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            paddingTop: 12,
+            borderTop: "1px solid rgba(255,255,255,.06)",
+          }}
+        >
           <p
             className="line-clamp-2"
-            style={{ color: "rgba(255,255,255,.7)", fontSize: 12, lineHeight: 1.55, margin: "0 0 8px" }}
+            style={{ color: "var(--fg-4)", fontSize: 12, lineHeight: 1.45, margin: 0, flex: 1, minWidth: 0 }}
           >
-            {post.summary}
+            “{post.context}”
           </p>
-        )}
-
-        {/* CONTEXT quote */}
-        <blockquote style={{ position: "relative", paddingLeft: 12, margin: "0 0 10px" }}>
-          <span
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 2,
-              borderRadius: 1,
-              background: `linear-gradient(180deg, ${m.color}, transparent)`,
-            }}
-          />
-          <p
-            className="line-clamp-2"
-            style={{
-              color: "rgba(255,255,255,.35)",
-              fontSize: 11,
-              lineHeight: 1.5,
-              margin: 0,
-              fontStyle: "italic",
-            }}
-          >
-            {post.context}
-          </p>
-        </blockquote>
-
-        {/* FOOTER */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {post.spark && <Sparkline points={post.spark} color={sparkColor} width={64} height={20} />}
-            <span className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,.3)" }}>
-              {getRelativeTime(post.updated_at)}
-            </span>
-          </div>
-          {post.confidence !== null && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <ConfidenceArc value={post.confidence} color={m.color} size={28} />
-              <span className="mono" style={{ fontSize: 13, fontWeight: 800, color: m.color }}>
-                {conf}%
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {post.spark && <Sparkline points={post.spark} color={m.color} width={52} height={18} />}
+            {post.confidence !== null && (
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <ConfidenceArc value={post.confidence} color={m.color} size={24} />
+                <span className="mono" style={{ fontSize: 13, fontWeight: 600, color: m.color }}>
+                  {conf}%
+                </span>
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </article>

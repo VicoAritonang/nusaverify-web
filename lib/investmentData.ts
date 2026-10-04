@@ -48,11 +48,11 @@ export function resultOf(r: PostResult | null | undefined): PostResult {
 //  Asset classes
 // ════════════════════════════════════════════════════════════════════
 export const ASSET_CLASS_COLORS: Record<string, string> = {
-  Saham: "#a5b4fc",
+  Saham: "#9db8ff",
   Crypto: "#fb923c",
-  Forex: "#22d3ee",
+  Forex: "#2fc6b4",
   Komoditas: "#fcd34d",
-  Makro: "#c4b5fd",
+  Makro: "#d8c4f5",
   "Reksa Dana": "#86efac",
   "Investasi Ilegal": "#f87171",
 };
@@ -97,10 +97,10 @@ export interface ThinkSourceConfig {
 }
 
 export const GROUP_COLOR: Record<AgentGroup, string> = {
-  regulator: "#22d3ee", // cyan
-  media: "#818cf8", // indigo-light
+  regulator: "#2fc6b4", // lagoon
+  media: "#9db8ff", // sapphire-light
   community: "#fcd34d", // amber
-  analyst: "#c4b5fd", // violet-light
+  analyst: "#e9c891", // champagne
 };
 
 export const THINK_SOURCES: ThinkSourceConfig[] = [

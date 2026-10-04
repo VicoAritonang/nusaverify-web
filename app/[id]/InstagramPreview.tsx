@@ -63,7 +63,7 @@ export default function InstagramPreview({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-2xl overflow-hidden border border-white/10 hover:border-indigo-500/40 transition-all duration-300 bg-white/[0.03] hover:bg-white/[0.06] no-underline"
+      className="group block rounded-2xl overflow-hidden border border-white/10 hover:border-[#e9c891]/40 transition-all duration-300 bg-white/[0.03] hover:bg-white/[0.06] no-underline"
     >
       <div className="flex items-stretch">
         {/* Left accent bar */}
@@ -115,7 +115,7 @@ export default function InstagramPreview({ url }: { url: string }) {
               <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
               <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
             </svg>
-            <span className="text-white/25 text-[10px] font-mono truncate group-hover:text-indigo-400/60 transition-colors">
+            <span className="text-white/25 text-[10px] font-mono truncate group-hover:text-[#e9c891]/70 transition-colors">
               {displayUrl}
             </span>
           </div>

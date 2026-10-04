@@ -37,13 +37,13 @@ interface Props {
 }
 
 // ── COLOR ──────────────────────────────────────────────────────────
-const ROOT = { color: "#818cf8", accent: "#c7d2fe" };
-const INSIGHT = { color: "#a78bfa", accent: "#ddd6fe" };
+const ROOT = { color: "#e9c891", accent: "#f7e9cc" };
+const INSIGHT = { color: "#9db8ff", accent: "#dbe5ff" };
 const GROUP_ACCENT: Record<AgentGroup, string> = {
-  regulator: "#a5f3fc",
-  media: "#c7d2fe",
+  regulator: "#a7f0e6",
+  media: "#dbe5ff",
   community: "#fde68a",
-  analyst: "#ddd6fe",
+  analyst: "#f7e9cc",
 };
 
 function scoreColor(v: number) {
@@ -97,7 +97,7 @@ const DIMS: Record<NodeType, { w: number; h: number }> = {
 export default function ExplorationGraph({ post, think, state }: Props) {
   const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
-  const fontsRef = useRef({ sans: "Inter, sans-serif", mono: "'JetBrains Mono', monospace" });
+  const fontsRef = useRef({ sans: "system-ui, sans-serif", mono: "ui-monospace, monospace" });
 
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({ nodes: [], links: [] });
   const [dims, setDims] = useState({ width: 0, height: 0 });
@@ -108,11 +108,11 @@ export default function ExplorationGraph({ post, think, state }: Props) {
   // Resolve the actual loaded font families (next/font hashes the names).
   useEffect(() => {
     const cs = getComputedStyle(document.body);
-    const sans = cs.getPropertyValue("--font-geist-sans").trim();
-    const mono = cs.getPropertyValue("--font-geist-mono").trim();
+    const sans = cs.getPropertyValue("--font-body-src").trim();
+    const mono = cs.getPropertyValue("--font-mono-src").trim();
     fontsRef.current = {
-      sans: sans ? `${sans}, Inter, sans-serif` : "Inter, sans-serif",
-      mono: mono ? `${mono}, 'JetBrains Mono', monospace` : "'JetBrains Mono', monospace",
+      sans: sans ? `${sans}, system-ui, sans-serif` : "system-ui, sans-serif",
+      mono: mono ? `${mono}, ui-monospace, monospace` : "ui-monospace, monospace",
     };
   }, []);
 
@@ -311,8 +311,8 @@ export default function ExplorationGraph({ post, think, state }: Props) {
       ctx.shadowColor = n.color;
       ctx.shadowBlur = isHovered ? 18 : 9;
       const body = ctx.createLinearGradient(rx, ry, rx, ry + H);
-      body.addColorStop(0, "rgba(13,16,32,0.97)");
-      body.addColorStop(1, "rgba(6,8,18,0.97)");
+      body.addColorStop(0, "rgba(22,27,44,0.96)");
+      body.addColorStop(1, "rgba(9,12,22,0.96)");
       roundRect(ctx, rx, ry, W, H, rad);
       ctx.fillStyle = body;
       ctx.fill();
@@ -452,17 +452,17 @@ export default function ExplorationGraph({ post, think, state }: Props) {
     const cx = midX + nx * bow * sign;
     const cy = midY + ny * bow * sign;
 
-    let colA = "rgba(129,140,248,0.55)";
-    let colB = "rgba(34,211,238,0.35)";
+    let colA = "rgba(233,200,145,0.55)";
+    let colB = "rgba(157,184,255,0.35)";
     if (t.type === "insight") {
-      colA = "rgba(167,139,250,0.55)";
-      colB = "rgba(99,102,241,0.3)";
+      colA = "rgba(157,184,255,0.55)";
+      colB = "rgba(74,125,255,0.3)";
     } else if (t.type === "score") {
       colA = (t.color || "#34d399") + "99";
       colB = (t.color || "#34d399") + "22";
     } else {
-      colA = (t.color || "#818cf8") + "88";
-      colB = (t.color || "#818cf8") + "22";
+      colA = (t.color || "#9db8ff") + "88";
+      colB = (t.color || "#9db8ff") + "22";
     }
 
     const grd = ctx.createLinearGradient(sx, sy, tx, ty);
@@ -528,8 +528,8 @@ export default function ExplorationGraph({ post, think, state }: Props) {
   const particleColor = useCallback((link: object) => {
     const t = (link as { target: GraphNode }).target;
     if (t.type === "score") return scoreColor(t.scoreVal ?? 0).border;
-    if (t.type === "insight") return "rgba(196,181,253,0.95)";
-    return (t.color || "#818cf8");
+    if (t.type === "insight") return "rgba(219,229,255,0.95)";
+    return (t.color || "#9db8ff");
   }, []);
 
   const particles = useMemo(
@@ -538,7 +538,7 @@ export default function ExplorationGraph({ post, think, state }: Props) {
         left: `${(i * 37) % 100}%`,
         top: `${(i * 53) % 100}%`,
         size: 1 + (i % 3),
-        color: i % 3 === 0 ? "rgba(129,140,248,0.6)" : i % 3 === 1 ? "rgba(34,211,238,0.5)" : "rgba(167,139,250,0.5)",
+        color: i % 3 === 0 ? "rgba(233,200,145,0.55)" : i % 3 === 1 ? "rgba(47,198,180,0.45)" : "rgba(157,184,255,0.5)",
         dur: 4 + (i % 4),
         delay: (i * 0.3) % 3,
       })),
@@ -550,53 +550,55 @@ export default function ExplorationGraph({ post, think, state }: Props) {
     return (
       <button
         onClick={() => setMinimized(false)}
-        className="fade-in-up"
-        style={{ width: "100%", padding: 14, borderRadius: 14, cursor: "pointer", background: "rgba(255,255,255,.025)", border: "1px solid rgba(99,102,241,.25)", textAlign: "center", transition: "all .25s ease" }}
+        className="lg lg-pill fade-in-up"
+        style={{ width: "100%", padding: "14px 20px", border: 0, textAlign: "center", color: "var(--fg-2)", fontSize: 14 }}
       >
-        <span className="up mono" style={{ fontSize: 11, color: "rgba(165,180,252,.7)", letterSpacing: ".15em", fontWeight: 700 }}>
-          + Lihat Knowledge Graph ({totalSources || THINK_SOURCES.length} sumber lintas-aset telah dieksplorasi)
-        </span>
+        Lihat peta penelusuran <span style={{ color: "var(--fg-4)" }}>· {totalSources || THINK_SOURCES.length} sumber dieksplorasi</span>
       </button>
     );
   }
 
   return (
-    <div ref={containerRef} className="graph-shell corner-marks fade-in-up" style={{ height: "76vh", minHeight: 560 }}>
+    <div ref={containerRef} className="graph-shell fade-in-up" style={{ height: "76vh", minHeight: 560 }}>
       {/* HUD top */}
       <div style={{ position: "absolute", top: 16, left: 18, right: 18, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "space-between", pointerEvents: "none" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span className="chip up" style={{ fontSize: 9.5, padding: "3px 9px", letterSpacing: ".15em", background: "rgba(0,0,0,.5)", border: "1px solid rgba(99,102,241,.35)", color: "#a5b4fc" }}>
-            <span className="dot-bull blink" style={{ background: "#a5b4fc", boxShadow: "0 0 6px rgba(165,180,252,.6)" }} />
-            {state === "exploring" ? "BUILDING KNOWLEDGE GRAPH" : "KNOWLEDGE GRAPH"}
+          <span className="chip" style={{ fontSize: 12.5, padding: "6px 13px", background: "rgba(233,200,145,.12)", border: "1px solid rgba(233,200,145,.32)", color: "var(--champagne-2)" }}>
+            {state === "exploring" ? (
+              <span className="live-dot" style={{ background: "var(--champagne)" }} />
+            ) : (
+              <span className="dot-bull" style={{ background: "var(--champagne)", boxShadow: "none" }} />
+            )}
+            {state === "exploring" ? "Membangun peta penelusuran" : "Peta penelusuran"}
           </span>
-          <span className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>
-            {Math.max(0, graphData.nodes.length)} nodes
+          <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>
+            {Math.max(0, graphData.nodes.length)} node
           </span>
         </div>
         {(state === "analyzing" || state === "completed") && (
-          <button className="btn-ghost" style={{ pointerEvents: "auto", padding: "5px 10px", fontSize: 11 }} onClick={() => setMinimized(true)}>
-            Tutup canvas
+          <button className="btn-ghost" style={{ pointerEvents: "auto", padding: "6px 12px", fontSize: 12.5 }} onClick={() => setMinimized(true)}>
+            Ringkas
           </button>
         )}
       </div>
 
       {/* Legend */}
       <div style={{ position: "absolute", left: 18, bottom: 18, zIndex: 5, pointerEvents: "none" }}>
-        <div className="mono up" style={{ fontSize: 9, color: "rgba(255,255,255,.35)", letterSpacing: ".15em", marginBottom: 6 }}>
-          LEGEND
+        <div className="eyebrow" style={{ fontSize: 10, marginBottom: 8 }}>
+          Legenda
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {[
-            { label: "ROOT · klaim utama", color: ROOT.color },
-            { label: "REGULATOR · BEI · OJK", color: GROUP_COLOR.regulator },
-            { label: "MEDIA · CNBC · Kontan · Bisnis", color: GROUP_COLOR.media },
-            { label: "SENTIMEN · komunitas retail", color: GROUP_COLOR.community },
-            { label: "ANALIS · sintesis multi-aset", color: GROUP_COLOR.analyst },
-            { label: "SKOR · verdict", color: "#34d399" },
+            { label: "Klaim utama", color: ROOT.color },
+            { label: "Regulator · BEI · OJK", color: GROUP_COLOR.regulator },
+            { label: "Media · CNBC · Kontan · Bisnis", color: GROUP_COLOR.media },
+            { label: "Sentimen komunitas retail", color: GROUP_COLOR.community },
+            { label: "Analis · sintesis multi-aset", color: GROUP_COLOR.analyst },
+            { label: "Skor per sumber", color: "#34d399" },
           ].map((l, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, boxShadow: `0 0 8px ${l.color}66` }} />
-              <span className="mono" style={{ fontSize: 9.5, color: "rgba(255,255,255,.5)", letterSpacing: ".05em" }}>
+              <span style={{ width: 7, height: 7, borderRadius: 7, background: l.color }} />
+              <span style={{ fontSize: 12, color: "var(--fg-3)" }}>
                 {l.label}
               </span>
             </div>
@@ -606,9 +608,9 @@ export default function ExplorationGraph({ post, think, state }: Props) {
 
       {/* Controls hint */}
       <div style={{ position: "absolute", right: 18, bottom: 18, zIndex: 5, pointerEvents: "none" }}>
-        <div className="glass" style={{ borderRadius: 10, padding: "6px 10px" }}>
-          <span className="mono up" style={{ fontSize: 9, color: "rgba(255,255,255,.4)", letterSpacing: ".12em" }}>
-            scroll · drag · klik node
+        <div className="glass" style={{ borderRadius: 999, padding: "7px 14px" }}>
+          <span style={{ fontSize: 12, color: "var(--fg-3)" }}>
+            Scroll untuk zoom · seret · klik node
           </span>
         </div>
       </div>
@@ -634,7 +636,7 @@ export default function ExplorationGraph({ post, think, state }: Props) {
       </div>
 
       {/* Scan line */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(165,180,252,.5), transparent)", animation: "hudScan 4s ease-in-out infinite", pointerEvents: "none", zIndex: 4 }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(233,200,145,.45), transparent)", animation: "hudScan 4s ease-in-out infinite", pointerEvents: "none", zIndex: 4 }} />
 
       {/* Canvas */}
       {dims.width > 0 && dims.height > 0 && (
@@ -672,13 +674,13 @@ export default function ExplorationGraph({ post, think, state }: Props) {
         <div className="absolute inset-0 flex items-center justify-center fade-in-up" style={{ zIndex: 50, background: "rgba(0,0,0,.7)", backdropFilter: "blur(8px)" }} onClick={() => setModal(null)}>
           <div
             className="glass-elev"
-            style={{ maxWidth: 560, width: "90%", borderRadius: 18, padding: 24, maxHeight: "75vh", overflowY: "auto", boxShadow: "0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(99,102,241,.18)" }}
+            style={{ maxWidth: 560, width: "90%", borderRadius: 28, padding: 28, maxHeight: "75vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setModal(null)}
               aria-label="Tutup"
-              style={{ position: "absolute", top: 12, right: 12, width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.4)", background: "rgba(255,255,255,.04)" }}
+              style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 999, border: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-2)", background: "rgba(255,255,255,.08)" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -686,17 +688,17 @@ export default function ExplorationGraph({ post, think, state }: Props) {
               </svg>
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <span className="dot-bull" style={{ background: "#22d3ee", boxShadow: "0 0 8px rgba(34,211,238,.6)" }} />
-              <h3 className="up mono" style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a5f3fc", letterSpacing: ".18em" }}>
+              <span className="dot-bull" style={{ background: "var(--champagne)", boxShadow: "none" }} />
+              <h3 className="h-display" style={{ margin: 0, fontSize: 18, color: "var(--fg)", paddingRight: 36 }}>
                 {modal.title}
               </h3>
             </div>
             {modal.url && (
-              <a href={modal.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ display: "inline-block", fontSize: 11, color: "rgba(34,211,238,.8)", marginBottom: 14, wordBreak: "break-all" }}>
+              <a href={modal.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ display: "inline-block", fontSize: 12, color: "var(--champagne)", marginBottom: 14, wordBreak: "break-all" }}>
                 ↗ {modal.url}
               </a>
             )}
-            <p style={{ margin: 0, color: "rgba(255,255,255,.75)", fontSize: 13.5, lineHeight: 1.65, whiteSpace: "pre-line" }}>{modal.body}</p>
+            <p style={{ margin: 0, color: "var(--fg-2)", fontSize: 15, lineHeight: 1.7, whiteSpace: "pre-line" }}>{modal.body}</p>
           </div>
         </div>
       )}

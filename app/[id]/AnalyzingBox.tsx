@@ -56,27 +56,16 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
     return (
       <button
         onClick={() => setMinimized(false)}
-        className="fade-in-up"
-        style={{
-          width: "100%",
-          padding: 14,
-          borderRadius: 14,
-          cursor: "pointer",
-          background: "rgba(255,255,255,.025)",
-          border: "1px solid rgba(99,102,241,.25)",
-          textAlign: "center",
-          transition: "all .25s ease",
-        }}
+        className="lg lg-pill fade-in-up"
+        style={{ width: "100%", padding: "14px 20px", border: 0, textAlign: "center", color: "var(--fg-2)", fontSize: 14 }}
       >
-        <span className="up mono" style={{ fontSize: 11, color: "rgba(165,180,252,.7)", letterSpacing: ".15em", fontWeight: 700 }}>
-          + Lihat Riwayat Chat AI ({agents.length} agen lintas-aset telah berkontribusi)
-        </span>
+        Lihat percakapan agen <span style={{ color: "var(--fg-4)" }}>· {agents.length} agen berkontribusi</span>
       </button>
     );
   }
 
   return (
-    <div className="glass-elev corner-marks fade-in-up" style={{ borderRadius: 24, padding: "28px 32px", position: "relative", overflow: "hidden" }}>
+    <div className="lg lg-dense fade-in-up" style={{ borderRadius: 32, padding: "28px 32px", overflow: "hidden" }}>
       <div
         style={{
           position: "absolute",
@@ -85,40 +74,39 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
           width: 320,
           height: 320,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(99,102,241,.15), transparent 70%)",
+          background: "radial-gradient(circle, rgba(74,125,255,.14), transparent 70%)",
           pointerEvents: "none",
         }}
       />
       <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
         <div
-          className="chip up"
+          className="chip"
           style={{
-            padding: "5px 12px",
-            fontSize: 10,
-            letterSpacing: ".15em",
-            background: "rgba(0,0,0,.4)",
-            border: `1px solid ${isCompleted ? "rgba(16,185,129,.35)" : "rgba(99,102,241,.35)"}`,
-            color: isCompleted ? "#6ee7b7" : "#c7d2fe",
+            padding: "6px 13px",
+            fontSize: 12.5,
+            background: isCompleted ? "rgba(16,185,129,.12)" : "rgba(233,200,145,.12)",
+            border: `1px solid ${isCompleted ? "rgba(16,185,129,.35)" : "rgba(233,200,145,.35)"}`,
+            color: isCompleted ? "#6ee7b7" : "var(--champagne-2)",
           }}
         >
           {isCompleted ? (
             <>
-              <span>✓</span> ANALISIS SELESAI
+              <span>✓</span> Analisis selesai
             </>
           ) : (
             <>
               <span style={{ display: "inline-flex", gap: 3 }}>
-                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "#a5b4fc" }} />
-                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "#a5b4fc", animationDelay: ".15s" }} />
-                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "#a5b4fc", animationDelay: ".3s" }} />
+                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "var(--champagne)" }} />
+                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "var(--champagne)", animationDelay: ".15s" }} />
+                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "var(--champagne)", animationDelay: ".3s" }} />
               </span>
-              CROSS-ANALYZING . . .
+              Agen sedang menganalisis silang
             </>
           )}
         </div>
         {isCompleted && (
-          <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => setMinimized(true)}>
-            Minimize
+          <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12.5 }} onClick={() => setMinimized(true)}>
+            Ringkas
           </button>
         )}
       </div>
@@ -137,10 +125,10 @@ export default function AnalyzingBox({ think, state, isCompleted }: Props) {
                 <div className="msg">{a.message}</div>
                 {a.url ? (
                   <a className="src-chip mono" href={a.url} target="_blank" rel="noopener noreferrer">
-                    ↗ source · {a.short}
+                    ↗ Buka sumber · {a.short}
                   </a>
                 ) : (
-                  <span className="src-chip mono">↗ source · {a.short}</span>
+                  <span className="src-chip mono">Sumber · {a.short}</span>
                 )}
               </div>
             </div>

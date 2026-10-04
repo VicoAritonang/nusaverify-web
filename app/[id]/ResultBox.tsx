@@ -27,10 +27,10 @@ function MetaCell({
 }) {
   return (
     <div>
-      <div className="label-tech" style={{ fontSize: 9, marginBottom: 4 }}>
+      <div className="eyebrow" style={{ fontSize: 10, marginBottom: 6 }}>
         {label}
       </div>
-      <div className={mono ? "mono" : ""} style={{ color: color || "#fff", fontSize: small ? 11.5 : 13, fontWeight: 700, lineHeight: 1.35 }}>
+      <div className={mono ? "mono" : ""} style={{ color: color || "var(--fg)", fontSize: small ? 13 : 14.5, fontWeight: 600, lineHeight: 1.4 }}>
         {value}
       </div>
     </div>
@@ -60,7 +60,7 @@ export default function ResultBox({ post }: { post: Post }) {
           style={{
             position: "absolute",
             inset: 0,
-            opacity: 0.15,
+            opacity: 0.1,
             pointerEvents: "none",
             background:
               "repeating-linear-gradient(-48deg, rgba(239,68,68,.25) 0, rgba(239,68,68,.25) 10px, transparent 10px, transparent 22px, rgba(255,255,255,.05) 22px, rgba(255,255,255,.05) 32px, transparent 32px, transparent 44px)",
@@ -73,18 +73,17 @@ export default function ResultBox({ post }: { post: Post }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
           <div
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: 22,
+              width: 72,
+              height: 72,
+              borderRadius: 24,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(0,0,0,.4)",
-              border: `1px solid ${m.color}50`,
+              background: `${m.color}14`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px ${m.color}55, 0 0 40px -6px ${m.color}55`,
               color: m.color,
-              fontSize: 32,
-              fontWeight: 800,
-              boxShadow: `0 0 30px ${m.color}33`,
+              fontSize: 30,
+              fontWeight: 700,
             }}
           >
             {m.icon}
@@ -115,11 +114,11 @@ export default function ResultBox({ post }: { post: Post }) {
               />
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <span className="mono" style={{ fontSize: 36, fontWeight: 800, color: m.color, lineHeight: 1, letterSpacing: "-.03em" }}>
+              <span className="h-display" style={{ fontSize: 38, color: m.color, lineHeight: 1 }}>
                 <CountUp to={Math.round(conf)} duration={1600} />%
               </span>
-              <span className="up label-tech" style={{ marginTop: 4, fontSize: 9 }}>
-                CONFIDENCE
+              <span className="eyebrow" style={{ marginTop: 6, fontSize: 10 }}>
+                Keyakinan
               </span>
             </div>
           </div>
@@ -128,14 +127,14 @@ export default function ResultBox({ post }: { post: Post }) {
         {/* RIGHT: verdict + summary + meta */}
         <div>
           <div
-            className="chip up"
-            style={{ background: "rgba(0,0,0,.3)", border: `1px solid ${m.color}55`, color: m.color, padding: "5px 12px", fontSize: 10.5, letterSpacing: ".18em", marginBottom: 14 }}
+            className="chip"
+            style={{ background: `${m.color}14`, border: `1px solid ${m.color}55`, color: m.color, padding: "6px 13px", fontSize: 12.5, marginBottom: 16 }}
           >
-            <span className="dot-bull blink" style={{ background: m.color, boxShadow: `0 0 8px ${m.color}99` }} />
-            VERDICT · {verdictLabel.toUpperCase()}
+            <span className="dot-bull" style={{ background: m.color, boxShadow: `0 0 8px ${m.color}99` }} />
+            Verdict · {verdictLabel}
           </div>
-          <h2 style={{ margin: "0 0 12px", fontSize: 24, fontWeight: 800, color: "#fff", letterSpacing: "-.015em" }}>Kesimpulan Analisis</h2>
-          <p style={{ margin: "0 0 22px", color: "rgba(255,255,255,.78)", fontSize: 15, lineHeight: 1.65 }}>
+          <h2 className="h-display" style={{ margin: "0 0 14px", fontSize: "clamp(24px, 2.6vw, 32px)", color: "var(--fg)" }}>Kesimpulan analisis</h2>
+          <p style={{ margin: "0 0 24px", color: "var(--fg-2)", fontSize: 16, lineHeight: 1.7 }}>
             {post.summary || "Ringkasan analisis belum tersedia."}
           </p>
 
@@ -144,24 +143,24 @@ export default function ResultBox({ post }: { post: Post }) {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: 10,
-                padding: 14,
-                borderRadius: 14,
-                background: "rgba(0,0,0,.25)",
-                border: "1px solid rgba(255,255,255,.06)",
+                gap: 16,
+                padding: 20,
+                borderRadius: 22,
+                background: "rgba(5,7,13,.35)",
+                boxShadow: "inset 0 1px 2px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.05)",
               }}
             >
-              <MetaCell label="Kelas Aset" value={post.asset_class || "—"} color={assetColor(post.asset_class) || "#fff"} />
+              <MetaCell label="Kelas Aset" value={post.asset_class || "—"} color={assetColor(post.asset_class) || undefined} />
               <MetaCell label="Instrumen" value={post.ticker ? `$${post.ticker}` : "—"} mono />
               <MetaCell label="Sektor / Sub" value={post.sector || post.category || "—"} />
               <MetaCell label="Sentimen" value={sentimentLabel(post.sentiment)} color={sentimentColor(post.sentiment)} />
-              <MetaCell label="Risiko" value={riskLabel(post.risk_level)} color={post.risk_level === "low" ? "#6ee7b7" : post.risk_level === "medium" ? "#fcd34d" : post.risk_level === "high" ? "#fca5a5" : "#fff"} />
+              <MetaCell label="Risiko" value={riskLabel(post.risk_level)} color={post.risk_level === "low" ? "#6ee7b7" : post.risk_level === "medium" ? "#fcd34d" : post.risk_level === "high" ? "#fca5a5" : undefined} />
               <MetaCell label="Tipe Klaim" value={(post.claim_type && CLAIM_TYPES[post.claim_type]?.label) || post.claim_type || "—"} />
               <MetaCell label="Dampak Harga" value={post.price_impact || "—"} small />
             </div>
           )}
 
-          <div className="disclaimer" style={{ marginTop: 14 }}>
+          <div className="disclaimer" style={{ marginTop: 16, paddingLeft: 0 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />

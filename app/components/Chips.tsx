@@ -10,10 +10,10 @@ export function TickerChip({
 }) {
   if (!ticker) return null;
   const c = assetClass ? ASSET_CLASS_COLORS[assetClass] : null;
-  const style = c ? { background: `${c}1f`, border: `1px solid ${c}50`, color: c } : undefined;
+  const style = c ? { background: `${c}14`, border: `1px solid ${c}38`, color: c } : undefined;
   return (
     <span className="chip chip-ticker" style={style}>
-      <span style={{ opacity: 0.5, fontWeight: 600 }}>$</span>
+      <span style={{ opacity: 0.5 }}>$</span>
       {ticker}
     </span>
   );
@@ -26,21 +26,10 @@ export function SectorChip({ sector }: { sector?: string | null }) {
 
 export function AssetClassChip({ assetClass }: { assetClass?: string | null }) {
   if (!assetClass) return null;
-  const c = ASSET_CLASS_COLORS[assetClass] || "#a5b4fc";
+  const c = ASSET_CLASS_COLORS[assetClass] || "#9db8ff";
   return (
-    <span
-      className="chip up"
-      style={{
-        background: `${c}18`,
-        border: `1px solid ${c}40`,
-        color: c,
-        fontSize: 9.5,
-        letterSpacing: ".1em",
-      }}
-    >
-      <span
-        style={{ width: 6, height: 6, borderRadius: 2, background: c, boxShadow: `0 0 6px ${c}99` }}
-      />
+    <span className="chip" style={{ background: `${c}14`, border: `1px solid ${c}38`, color: c }}>
+      <span style={{ width: 6, height: 6, borderRadius: 6, background: c }} />
       {assetClass}
     </span>
   );
@@ -58,20 +47,20 @@ export function SentimentBadge({
     return (
       <span className="chip chip-sentiment-bull">
         <span>▲</span>
-        {withLabel && "BULLISH"}
+        {withLabel && "Bullish"}
       </span>
     );
   if (sentiment === "bearish")
     return (
       <span className="chip chip-sentiment-bear">
         <span>▼</span>
-        {withLabel && "BEARISH"}
+        {withLabel && "Bearish"}
       </span>
     );
   return (
     <span className="chip chip-sentiment-neu">
       <span>◆</span>
-      {withLabel && "NEUTRAL"}
+      {withLabel && "Netral"}
     </span>
   );
 }
@@ -79,7 +68,7 @@ export function SentimentBadge({
 export function RiskMeter({ level }: { level?: RiskLevel | null }) {
   if (!level) return null;
   const cls = level === "low" ? "chip-risk-low" : level === "medium" ? "chip-risk-mid" : "chip-risk-high";
-  const label = level === "low" ? "RENDAH" : level === "medium" ? "MENENGAH" : "TINGGI";
+  const label = level === "low" ? "rendah" : level === "medium" ? "menengah" : "tinggi";
   const bars = level === "low" ? 1 : level === "medium" ? 2 : 3;
   return (
     <span className={`chip ${cls}`}>
@@ -96,7 +85,7 @@ export function RiskMeter({ level }: { level?: RiskLevel | null }) {
           />
         ))}
       </span>
-      RISIKO {label}
+      Risiko {label}
     </span>
   );
 }
@@ -105,12 +94,11 @@ export function VerdictChip({ result, meta }: { result: PostResult; meta?: Resul
   const m = meta ?? RESULT_META[result];
   return (
     <span
-      className="chip up"
+      className="chip"
       style={{
-        background: `${m.labelColor}1f`,
+        background: `${m.labelColor}1c`,
         border: `1px solid ${m.labelColor}40`,
         color: m.color,
-        fontSize: 9.5,
       }}
     >
       {m.icon} {m.label}
