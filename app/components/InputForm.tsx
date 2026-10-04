@@ -2,9 +2,11 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { QUICK_INPUTS } from "@/lib/investmentData";
 
 export default function InputForm() {
   const [context, setContext] = useState("");
+  const [ticker, setTicker] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,8 +20,14 @@ export default function InputForm() {
   const canSubmit = context.trim().length > 0 || image !== null;
 
   const handleImageFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) { setError("File harus berupa gambar"); return; }
-    if (file.size > 10 * 1024 * 1024) { setError("Ukuran gambar maksimal 10MB"); return; }
+    if (!file.type.startsWith("image/")) {
+      setError("File harus berupa gambar");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Ukuran gambar maksimal 10MB");
+      return;
+    }
     setError(null);
     setImageName(file.name);
     const reader = new FileReader();
@@ -27,23 +35,30 @@ export default function InputForm() {
     reader.readAsDataURL(file);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleImageFile(file);
-  }, [handleImageFile]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleImageFile(file);
+    },
+    [handleImageFile]
+  );
 
   const handleSubmit = async () => {
-    if (!canSubmit) { setError("Masukkan teks atau gambar untuk dianalisis"); return; }
-    setIsSubmitting(true); setError(null);
+    if (!canSubmit || isSubmitting) {
+      if (!canSubmit) setError("Masukkan klaim, link, atau gambar untuk divalidasi");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context: context.trim(), image }),
+        body: JSON.stringify({ context: context.trim(), image, ticker: ticker.trim() || null }),
       });
       const data = await res.json();
-      
       if (data.status === "exist" || data.status === "initialized") {
         router.push(`/${data.post_id}`);
       } else if (data.status === "unauthorized") {
@@ -60,196 +75,323 @@ export default function InputForm() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
-      <div
-        className={`relative rounded-2xl transition-all duration-500 ${
-          isFocused
-            ? "shadow-[0_0_0_1px_rgba(99,102,241,0.5),0_0_40px_rgba(99,102,241,0.15)]"
-            : "shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_8px_32px_rgba(0,0,0,0.4)]"
-        }`}
-        style={{ background: "rgba(12,14,26,0.85)", backdropFilter: "blur(24px)" }}
-      >
-        {/* Animated top border */}
-        <div
-          className="absolute top-0 left-8 right-8 h-px rounded-full transition-opacity duration-500"
-          style={{
-            background: isFocused
-              ? "linear-gradient(90deg, transparent, rgba(99,102,241,0.8), rgba(168,85,247,0.6), transparent)"
-              : "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
-          }}
-        />
-
-        <div className="p-6 relative">
-          
-          {/* ── PREPARATION OVERLAY ── */}
+    <div className="fade-in-up" style={{ animationDelay: ".15s", maxWidth: 820, margin: "0 auto 24px" }}>
+      <div className={`input-shell ${isFocused ? "focused" : ""}`}>
+        <div style={{ padding: 24, position: "relative" }} className="corner-marks">
+          {/* ── SUBMIT OVERLAY ── */}
           {isSubmitting && (
-            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-2xl bg-[#0c0e1a]/95 backdrop-blur-md animate-fade-in-up">
-              <div className="relative w-24 h-24 mb-6">
-                {/* Robot / Core animation */}
-                <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 animate-[spin_3s_linear_infinite]" />
-                <div className="absolute inset-2 rounded-full border-4 border-t-purple-500 border-r-transparent border-b-transparent border-l-transparent animate-[spin_1.5s_cubic-bezier(0.5,0.1,0.5,0.9)_infinite]" />
-                <div className="absolute inset-4 rounded-full border-4 border-l-emerald-400 border-t-transparent border-r-transparent border-b-transparent animate-[spin_2s_linear_infinite_reverse]" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_30px_rgba(99,102,241,0.8)] animate-pulse" />
+            <div
+              className="fade-in-up"
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 50,
+                borderRadius: 18,
+                background: "rgba(12,14,26,.96)",
+                backdropFilter: "blur(12px)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 14,
+              }}
+            >
+              <div style={{ position: "relative", width: 88, height: 88 }}>
+                <div
+                  className="spin-slow"
+                  style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "3px solid rgba(99,102,241,.15)" }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 8,
+                    borderRadius: "50%",
+                    border: "3px solid transparent",
+                    borderTopColor: "#8b5cf6",
+                    animation: "spinSlow 1.4s linear infinite",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 16,
+                    borderRadius: "50%",
+                    border: "3px solid transparent",
+                    borderLeftColor: "#34d399",
+                    animation: "spinSlow 2s linear infinite reverse",
+                  }}
+                />
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div
+                    className="breathe"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 10,
+                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      boxShadow: "0 0 30px rgba(99,102,241,.7)",
+                    }}
+                  />
                 </div>
-                {/* Floating data particles */}
-                <div className="absolute top-0 left-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping" style={{ animationDuration: '2s' }} />
-                <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" style={{ animationDelay: '0.7s', animationDuration: '1.5s' }} />
               </div>
-              
-              <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2">
-                Menghubungkan ke AI Core
-                <span className="flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </span>
-              </h3>
-              <p className="text-white/40 text-xs font-medium max-w-[250px] text-center leading-relaxed">
-                Mempersiapkan agen analisis, mengecek database global, dan menginisiasi neural network.
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#fff" }}>Menghubungkan ke AI Core</h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 11.5,
+                  color: "rgba(255,255,255,.4)",
+                  textAlign: "center",
+                  maxWidth: 320,
+                  lineHeight: 1.5,
+                }}
+              >
+                Memuat agen BEI, OJK, dan kanal finansial — neural network siap menelusuri klaim Anda.
               </p>
-              
-              {/* Progress bar mock */}
-              <div className="w-48 h-1 bg-white/10 rounded-full mt-6 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 animate-[shimmer_2s_infinite] w-full" style={{ backgroundSize: '200% 100%' }} />
+              <div style={{ width: 200, height: 2, background: "rgba(255,255,255,.08)", borderRadius: 2, overflow: "hidden" }}>
+                <div
+                  className="shimmer"
+                  style={{ height: "100%", width: "100%", background: "linear-gradient(90deg, transparent, #6366f1, #34d399, transparent)" }}
+                />
               </div>
             </div>
           )}
 
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 shadow-lg shadow-indigo-900/60 shrink-0">
+          {/* HEADER */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div
+              style={{
+                position: "relative",
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 6px 18px rgba(99,102,241,.4)",
+              }}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="M9 12l2 2 4-4"/>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="M9 12l2 2 4-4" />
               </svg>
-              <span className="absolute inset-0 rounded-xl border border-indigo-400/30 animate-ping" style={{ animationDuration: "2.5s" }} />
+              <span className="aura-pulse" style={{ position: "absolute", inset: 0, borderRadius: 12, border: "1px solid rgba(165,180,252,.35)" }} />
             </div>
             <div>
-              <h2 className="font-bold text-white text-[15px] leading-tight">Verifikasi Fakta</h2>
-              <p className="text-white/35 text-[11px]">Masukkan klaim, link berita, atau gambar — bisa dikombinasikan</p>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#fff" }}>Validasi Informasi Investasi</h2>
+              <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,.4)" }}>
+                Saham · Crypto · Forex · Emas · Makro — tempel klaim, link, atau screenshot.
+              </p>
             </div>
           </div>
 
-          {/* Textarea */}
+          {/* QUICK CHIPS */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 14 }}>
+            <span className="label-tech" style={{ fontSize: 9, padding: "5px 0", marginRight: 4 }}>
+              CONTOH:
+            </span>
+            {QUICK_INPUTS.map((q, i) => (
+              <button key={i} type="button" className="qchip" onClick={() => setContext(q.text)}>
+                {q.label}
+              </button>
+            ))}
+          </div>
+
+          {/* TEXTAREA */}
           <textarea
-            id="analysis-input"
+            className="field"
             value={context}
-            onChange={(e) => { if (e.target.value.length <= charLimit) setContext(e.target.value); }}
+            onChange={(e) => {
+              if (e.target.value.length <= charLimit) setContext(e.target.value);
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder="Tulis klaim, tempel link berita, atau deskripsikan konten yang ingin diverifikasi..."
+            placeholder="Cth: 'BTC akan tembus $200K bulan ini', 'Fed cut rate Juni', 'Robot trading 20% per minggu', screenshot grup Telegram crypto, dst."
             rows={4}
-            className="w-full rounded-xl px-4 py-3.5 text-sm text-white resize-none outline-none transition-all duration-300 placeholder-white/20 font-medium leading-relaxed"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: isFocused ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.07)",
-              caretColor: "#818cf8",
-            }}
           />
-          <div className="flex justify-end mt-1 px-1 mb-3">
-            <span className={`text-[10px] font-mono ${context.length > charLimit * 0.9 ? "text-amber-400/70" : "text-white/20"}`}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4, padding: "0 4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="label-tech" style={{ fontSize: 9 }}>
+                INSTRUMEN (OPSIONAL)
+              </span>
+              <input
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase().slice(0, 8))}
+                placeholder="BBCA / BTC / XAU"
+                className="mono"
+                style={{
+                  width: 120,
+                  padding: "3px 8px",
+                  fontSize: 11,
+                  borderRadius: 6,
+                  background: "rgba(99,102,241,.08)",
+                  border: "1px solid rgba(99,102,241,.25)",
+                  color: "#c7d2fe",
+                  outline: "none",
+                  letterSpacing: ".05em",
+                }}
+              />
+            </div>
+            <span
+              className="mono"
+              style={{ fontSize: 10, color: context.length > charLimit * 0.9 ? "#fcd34d" : "rgba(255,255,255,.25)" }}
+            >
               {context.length} / {charLimit}
             </span>
           </div>
 
-          {/* Image upload — always visible, optional */}
+          {/* IMAGE DROPZONE */}
           <div
-            className={`relative rounded-xl border border-dashed transition-all duration-300 cursor-pointer overflow-hidden ${
-              isDragging
-                ? "border-indigo-400/60 bg-indigo-500/8 scale-[1.01]"
-                : image
-                ? "border-emerald-500/35 bg-emerald-500/5"
-                : "border-white/8 hover:border-white/15 hover:bg-white/[0.02]"
-            }`}
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
             onDragLeave={() => setIsDragging(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 14px",
+              marginTop: 12,
+              borderRadius: 12,
+              cursor: "pointer",
+              border: `1px dashed ${isDragging ? "rgba(99,102,241,.6)" : image ? "rgba(16,185,129,.4)" : "rgba(255,255,255,.1)"}`,
+              background: isDragging ? "rgba(99,102,241,.08)" : image ? "rgba(16,185,129,.05)" : "rgba(255,255,255,.015)",
+              transition: "all .25s ease",
+            }}
           >
-            <input type="file" ref={fileInputRef} accept="image/*" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }} />
-
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImageFile(f);
+              }}
+            />
             {image ? (
-              <div className="flex items-center gap-4 px-4 py-3">
+              <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image} alt="Preview" className="w-14 h-14 rounded-xl object-cover ring-1 ring-emerald-500/30" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-emerald-300 font-medium text-xs truncate">{imageName}</p>
-                  <p className="text-white/30 text-[10px] mt-0.5">Klik untuk ganti</p>
+                <img src={image} alt="Preview" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", boxShadow: "0 0 0 1px rgba(16,185,129,.4)" }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "#6ee7b7", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {imageName}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,.3)" }}>Klik untuk ganti gambar</p>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setImage(null); setImageName(null); }}
-                  className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImage(null);
+                    setImageName(null);
+                  }}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: "rgba(239,68,68,.1)",
+                    border: "1px solid rgba(239,68,68,.25)",
+                    color: "#fca5a5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                  aria-label="Hapus gambar"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${isDragging ? "bg-indigo-500/20" : "bg-white/5"}`}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isDragging ? "#818cf8" : "rgba(255,255,255,0.2)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/>
+              <>
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(255,255,255,.05)",
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isDragging ? "#a5b4fc" : "rgba(255,255,255,.4)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21,15 16,10 5,21" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-white/30 text-xs font-medium">Lampirkan gambar <span className="text-white/18 font-normal">(opsional)</span></p>
-                  <p className="text-white/15 text-[10px]">Seret atau klik · PNG, JPG, WEBP · maks 10MB</p>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "rgba(255,255,255,.45)", fontWeight: 500 }}>
+                    Lampirkan gambar <span style={{ color: "rgba(255,255,255,.25)" }}>(opsional)</span>
+                  </p>
+                  <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,.2)" }}>
+                    Screenshot grup Telegram/WA, postingan influencer, headline Bloomberg/Reuters · PNG/JPG · maks 10MB
+                  </p>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mt-3 flex items-center gap-2.5 text-red-300 text-xs bg-red-500/8 border border-red-500/20 rounded-xl px-4 py-2.5 animate-fade-in-up">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          {/* SUBMIT */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18 }}>
+            <button className="btn-primary btn-shine" disabled={!canSubmit || isSubmitting} onClick={handleSubmit} style={{ flex: 1 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22,2 15,22 11,13 2,9" />
               </svg>
+              {isSubmitting ? "Menganalisis…" : "Analisis Sekarang"}
+              <span className="mono" style={{ fontSize: 10, opacity: 0.5, marginLeft: 6 }}>
+                ⏎
+              </span>
+            </button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span className="dot-bull blink" />
+                <span style={{ fontSize: 10.5, color: "rgba(255,255,255,.45)", fontWeight: 600 }}>AI Online</span>
+              </div>
+              <span className="mono" style={{ fontSize: 9, color: "rgba(255,255,255,.25)", letterSpacing: ".05em" }}>
+                6 sumber aktif
+              </span>
+            </div>
+          </div>
+
+          {error && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: "8px 12px",
+                borderRadius: 10,
+                background: "rgba(239,68,68,.08)",
+                border: "1px solid rgba(239,68,68,.2)",
+                color: "#fca5a5",
+                fontSize: 11.5,
+              }}
+            >
               {error}
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Submit row */}
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              id="submit-analysis"
-              onClick={handleSubmit}
-              disabled={isSubmitting || !canSubmit}
-              className={`relative flex-1 py-3 px-6 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 overflow-hidden ${
-                isSubmitting
-                  ? "bg-indigo-600/40 text-white/50 cursor-wait"
-                  : !canSubmit
-                  ? "bg-white/5 text-white/20 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 hover:shadow-lg hover:shadow-indigo-900/60 active:scale-[0.98]"
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" strokeLinecap="round"/>
-                  </svg>
-                  Menganalisis...
-                </>
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/>
-                  </svg>
-                  Analisis Sekarang
-                </>
-              )}
-            </button>
-            <div className="flex flex-col items-center gap-0.5 px-2 shrink-0">
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] text-white/25 font-medium">AI Online</span>
-              </div>
-              <span className="text-[9px] text-white/15">Multi-source</span>
-            </div>
-          </div>
+      <div style={{ marginTop: 10 }}>
+        <div className="disclaimer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>
+            <b>Disclaimer:</b> NusaVerify memvalidasi informasi, <b>bukan</b> memberi rekomendasi jual/beli. Bukan nasihat investasi.
+          </span>
         </div>
       </div>
     </div>

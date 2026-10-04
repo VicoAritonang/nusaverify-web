@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Think } from "@/lib/types";
+import { THINK_SOURCES } from "@/lib/investmentData";
 
 interface Props {
   think: Think;
@@ -11,179 +12,140 @@ interface Props {
 
 export default function AnalyzingBox({ think, state, isCompleted }: Props) {
   const [minimized, setMinimized] = useState(false);
+  const [reveal, setReveal] = useState(0);
 
+  const record = think as unknown as Record<string, string | null>;
+  const insightOf = (k: string) => record[`${k}_insight`] ?? null;
+  const urlOf = (k: string) => record[`${k}_url`] ?? null;
+
+  const agents = THINK_SOURCES.map((s) => ({
+    ...s,
+    message: insightOf(s.key) || "Menelusuri dan mengevaluasi sumber…",
+    url: urlOf(s.key),
+  }));
+
+  // Reveal: stream while analyzing, show all when completed.
   useEffect(() => {
-    // When completed, auto-minimize after a brief delay
-    if (state === "completed" || isCompleted) {
-      const t = setTimeout(() => {
-        setMinimized(true);
-      }, 1500);
-      return () => clearTimeout(t);
-    } else {
-      setMinimized(false);
+    if (isCompleted || state === "completed") {
+      setReveal(agents.length);
+      return;
     }
+    if (state === "analyzing") {
+      let i = 0;
+      let timer: ReturnType<typeof setTimeout>;
+      const tick = () => {
+        i++;
+        setReveal(i);
+        if (i < agents.length) timer = setTimeout(tick, 900);
+      };
+      timer = setTimeout(tick, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [state, isCompleted, agents.length]);
+
+  // Auto-minimize after completion settles.
+  useEffect(() => {
+    if (state === "completed" || isCompleted) {
+      const t = setTimeout(() => setMinimized(true), 2200);
+      return () => clearTimeout(t);
+    }
+    setMinimized(false);
   }, [state, isCompleted]);
 
   if (minimized) {
     return (
-      <div 
+      <button
         onClick={() => setMinimized(false)}
-        className="glass rounded-2xl p-4 cursor-pointer hover:bg-white/5 transition-all text-center animate-fade-in-up border border-indigo-700/40"
+        className="fade-in-up"
+        style={{
+          width: "100%",
+          padding: 14,
+          borderRadius: 14,
+          cursor: "pointer",
+          background: "rgba(255,255,255,.025)",
+          border: "1px solid rgba(99,102,241,.25)",
+          textAlign: "center",
+          transition: "all .25s ease",
+        }}
       >
-        <span className="text-white/40 text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2">
-          <span>+</span>
-          Analisis Selesai (Klik untuk melihat riwayat chat AI)
+        <span className="up mono" style={{ fontSize: 11, color: "rgba(165,180,252,.7)", letterSpacing: ".15em", fontWeight: 700 }}>
+          + Lihat Riwayat Chat AI ({agents.length} agen lintas-aset telah berkontribusi)
         </span>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div className="relative rounded-3xl backdrop-blur-xl border border-indigo-500/30 bg-indigo-950/20 overflow-hidden transition-all duration-700 p-6 md:p-10 animate-fade-in-up shadow-2xl">
-      
-      {/* Background glow */}
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none opacity-20 bg-indigo-600" />
-
-      {/* Header & GIF */}
-      <div className="flex items-start justify-between mb-10 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 border border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-            {!isCompleted ? (
-              <>
-                <div className="typing-indicator flex gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-300 ml-1">
-                  Cross-Analyzing . . .
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-emerald-400 text-sm">✓</span>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-                  Analisis Selesai
-                </span>
-              </>
-            )}
-          </div>
+    <div className="glass-elev corner-marks fade-in-up" style={{ borderRadius: 24, padding: "28px 32px", position: "relative", overflow: "hidden" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: -60,
+          right: -60,
+          width: 320,
+          height: 320,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(99,102,241,.15), transparent 70%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+        <div
+          className="chip up"
+          style={{
+            padding: "5px 12px",
+            fontSize: 10,
+            letterSpacing: ".15em",
+            background: "rgba(0,0,0,.4)",
+            border: `1px solid ${isCompleted ? "rgba(16,185,129,.35)" : "rgba(99,102,241,.35)"}`,
+            color: isCompleted ? "#6ee7b7" : "#c7d2fe",
+          }}
+        >
+          {isCompleted ? (
+            <>
+              <span>✓</span> ANALISIS SELESAI
+            </>
+          ) : (
+            <>
+              <span style={{ display: "inline-flex", gap: 3 }}>
+                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "#a5b4fc" }} />
+                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "#a5b4fc", animationDelay: ".15s" }} />
+                <span className="blink" style={{ width: 4, height: 4, borderRadius: 2, background: "#a5b4fc", animationDelay: ".3s" }} />
+              </span>
+              CROSS-ANALYZING . . .
+            </>
+          )}
         </div>
-
-        {/* Minimize button */}
         {isCompleted && (
-          <button 
-            onClick={() => setMinimized(true)}
-            className="text-white/40 hover:text-white/80 p-2 z-10"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => setMinimized(true)}>
+            Minimize
           </button>
         )}
       </div>
 
-      {/* Middle layout: Chat on left, GIF on right (if not completed) */}
-      <div className="flex flex-col-reverse lg:flex-row items-end lg:items-center justify-between gap-10 relative z-10 w-full max-w-4xl mx-auto">
-        
-        {/* Chat bubbles */}
-        <div className="flex-1 space-y-6 w-full">
-          <ChatBubble
-            name="Official account statement"
-            role="Official API & Journal Scraper"
-            message={think.official_insight || "Memproses validasi dari sumber resmi..."}
-            color="emerald"
-            delay={0}
-            avatar="🏛️"
-          />
-          <ChatBubble
-            name="Media : CNBC insight"
-            role="News & Social Media Intelligence"
-            message={think.cnbc_insight || "Menganalisis sentimen dan tren pemberitaan CNBC..."}
-            color="amber"
-            delay={1}
-            avatar="📰"
-          />
-          <ChatBubble
-            name="Media : Detik insight"
-            role="News & Social Media Intelligence"
-            message={think.detik_insight || "Menganalisis sentimen dan tren pemberitaan Detik..."}
-            color="amber"
-            delay={2}
-            avatar="📰"
-          />
-          <ChatBubble
-            name="Media : Kompas insight"
-            role="News & Social Media Intelligence"
-            message={think.kompas_insight || "Menganalisis sentimen dan tren pemberitaan Kompas..."}
-            color="amber"
-            delay={3}
-            avatar="📰"
-          />
-          <ChatBubble
-            name="Media : iNews insight"
-            role="News & Social Media Intelligence"
-            message={think.inews_insight || "Menganalisis sentimen dan tren pemberitaan iNews..."}
-            color="amber"
-            delay={4}
-            avatar="📰"
-          />
-          <ChatBubble
-            name="General Knowledge evaluator"
-            role="Deep Logic & Context Engine"
-            message={think.analysis_insight || "Menggabungkan temuan dan mengevaluasi probabilitas kebenaran klaim..."}
-            color="purple"
-            delay={5}
-            avatar="🧠"
-          />
-        </div>
-
-        {/* Analyzing GIF */}
-        {state !== "completed" && !isCompleted && (
-          <div className="shrink-0 animate-fade-in-up flex flex-col items-center gap-3">
-            <div className="p-2 rounded-2xl bg-black/40 border border-indigo-500/30">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src="/assets/analyzing.gif" 
-                alt="Analyzing..." 
-                className="rounded-xl object-cover mix-blend-screen opacity-90 shadow-[0_0_30px_rgba(99,102,241,0.3)]"
-                width={250}
-                height={141}
-              />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, maxWidth: 900, margin: "0 auto" }}>
+        {agents.map((a, i) => {
+          if (i >= reveal) return null;
+          return (
+            <div key={a.key} className={`bubble ${a.group} fade-in-up`} style={{ animationDelay: `${(i % 4) * 0.08}s` }}>
+              <div className="avatar">{a.avatar}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="meta">
+                  <span className="name">{a.name}</span>
+                  <span className="role mono">{a.role}</span>
+                </div>
+                <div className="msg">{a.message}</div>
+                {a.url ? (
+                  <a className="src-chip mono" href={a.url} target="_blank" rel="noopener noreferrer">
+                    ↗ source · {a.short}
+                  </a>
+                ) : (
+                  <span className="src-chip mono">↗ source · {a.short}</span>
+                )}
+              </div>
             </div>
-            <p className="text-indigo-300/60 text-[10px] uppercase tracking-widest font-mono">
-              Synthesizing outputs
-            </p>
-          </div>
-        )}
-      </div>
-
-    </div>
-  );
-}
-
-function ChatBubble({ name, role, message, color, delay, avatar }: any) {
-  const colors: Record<string, string> = {
-    emerald: "from-emerald-900/40 text-emerald-300 border-emerald-500/30",
-    amber: "from-amber-900/40 text-amber-300 border-amber-500/30",
-    purple: "from-purple-900/40 text-purple-300 border-purple-500/30",
-  };
-  const cls = colors[color];
-
-  return (
-    <div className="flex items-end gap-3 animate-fade-in-up" style={{ animationDelay: `${delay * 0.15}s` }}>
-      {/* Avatar */}
-      <div className={`w-10 h-10 shrink-0 rounded-2xl flex items-center justify-center text-lg bg-black/50 border ${cls.split(' ').pop()}`}>
-        {avatar}
-      </div>
-
-      {/* Message Box */}
-      <div className="flex flex-col gap-1 max-w-[90%]">
-        <div className="flex items-baseline gap-2 ml-1">
-          <span className="text-white/80 font-bold text-xs">{name}</span>
-          <span className="text-white/30 text-[9px] font-mono tracking-wider">{role}</span>
-        </div>
-        <div className={`relative px-5 py-3.5 rounded-2xl rounded-bl-sm bg-gradient-to-br ${cls} backdrop-blur-sm border shadow-lg text-xs leading-relaxed`}>
-          {message}
-        </div>
+          );
+        })}
       </div>
     </div>
   );

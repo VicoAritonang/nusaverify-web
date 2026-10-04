@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Post } from "@/lib/types";
 import PostsGrid from "./components/PostsGrid";
 import InputForm from "./components/InputForm";
+import Logo from "./components/Logo";
+import TickerTape from "./components/TickerTape";
+import MarketPulse from "./components/MarketPulse";
 
-export const revalidate = 30; // ISR every 30s
+export const revalidate = 30;
 
 async function getPosts(): Promise<Post[]> {
   const { data, error } = await supabase
@@ -24,65 +28,121 @@ export default async function Home() {
   const posts = await getPosts();
 
   return (
-    <div className="min-h-screen bg-grid relative">
-      {/* Background glows */}
-      <div className="bg-radial-top fixed inset-0 pointer-events-none z-0" />
-      <div className="fixed top-20 left-10 w-72 h-72 bg-indigo-600/10 rounded-full blur-[100px] animate-breathe pointer-events-none" />
-      <div
-        className="fixed bottom-20 right-10 w-96 h-96 bg-purple-600/8 rounded-full blur-[120px] animate-breathe pointer-events-none"
-        style={{ animationDelay: "2s" }}
-      />
+    <div className="min-h-screen relative">
+      {/* Layered background */}
+      <div className="fixed inset-0 bg-grid bg-grid-fade pointer-events-none z-0" />
+      <div className="fixed inset-0 bg-radial-top pointer-events-none z-0" />
+      <div className="fixed top-24 -left-24 w-[320px] h-[320px] rounded-full blur-[100px] breathe pointer-events-none z-0" style={{ background: "rgba(99,102,241,.1)" }} />
+      <div className="fixed bottom-10 -right-24 w-[400px] h-[400px] rounded-full blur-[120px] breathe pointer-events-none z-0" style={{ background: "rgba(139,92,246,.08)", animationDelay: "2s" }} />
+      <div className="fixed top-1/3 right-1/4 w-[280px] h-[280px] rounded-full blur-[110px] drift pointer-events-none z-0" style={{ background: "rgba(34,211,238,.04)" }} />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ── HERO ──────────────────────────────── */}
-        <header className="text-center mb-8 animate-fade-in-down">
-          <div className="inline-flex items-center justify-center mb-5">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse-glow overflow-hidden bg-black/20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="NusaVerify Logo" width={1024} height={1024} className="w-full h-full object-cover" />
+      <div className="relative z-10">
+        {/* NAV STRIP */}
+        <div className="wrap">
+          <nav className="fade-in-down" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0" }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "inherit" }}>
+              <Logo size={36} />
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-.02em", color: "#fff" }}>
+                    Nusa<span style={{ color: "#a5b4fc" }}>Verify</span>
+                  </span>
+                  <span
+                    className="mono up"
+                    style={{
+                      fontSize: 9,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      background: "rgba(255,255,255,.05)",
+                      border: "1px solid rgba(255,255,255,.08)",
+                      color: "rgba(255,255,255,.4)",
+                      letterSpacing: ".1em",
+                    }}
+                  >
+                    v2.0 · MULTI-ASSET
+                  </span>
+                </div>
+                <div className="label-tech" style={{ marginTop: 2, fontSize: 9 }}>
+                  AI Investment Intelligence · Saham · Crypto · Forex · Makro
+                </div>
               </div>
-              <div className="absolute -inset-2 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-xl -z-10 animate-breathe" />
+            </Link>
+            <div className="hidden md:flex" style={{ alignItems: "center", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span className="dot-bull blink" />
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,.5)" }}>AI Core Online</span>
+              </div>
+              <div className="mono up" style={{ fontSize: 10, color: "rgba(255,255,255,.3)", letterSpacing: ".1em" }}>
+                6 SUMBER · LIVE POLLING
+              </div>
             </div>
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
-            <span className="bg-gradient-to-r from-white via-indigo-200 to-white bg-clip-text text-transparent animate-gradient-shift">
-              NusaVerify
-            </span>
-          </h1>
-          <p className="mt-2 text-white/40 text-sm sm:text-base font-medium max-w-lg mx-auto">
-            AI-Powered Multi-Source Fact Verification Engine
-          </p>
-
-          {/* Ticker */}
-          <div className="mt-5 overflow-hidden rounded-full glass px-4 py-1.5 max-w-md mx-auto">
-            <div className="flex" style={{ animation: "marquee 25s linear infinite" }}>
-              <span className="text-[10px] text-white/30 whitespace-nowrap mr-8">
-                🛡 Trusted Sources &nbsp;•&nbsp; 🤖 LLM Analysis &nbsp;•&nbsp; 📊 Confidence Scoring &nbsp;•&nbsp; ✅ Real-time Verification &nbsp;•&nbsp; 🌐 Multi-Platform &nbsp;•&nbsp;
-              </span>
-              <span className="text-[10px] text-white/30 whitespace-nowrap mr-8">
-                🛡 Trusted Sources &nbsp;•&nbsp; 🤖 LLM Analysis &nbsp;•&nbsp; 📊 Confidence Scoring &nbsp;•&nbsp; ✅ Real-time Verification &nbsp;•&nbsp; 🌐 Multi-Platform &nbsp;•&nbsp;
-              </span>
-            </div>
-          </div>
-        </header>
-
-        {/* ── INPUT FORM ────────────────────────── */}
-        <div className="mb-8">
-          <InputForm />
+          </nav>
         </div>
 
-        {/* ── POSTS GRID + FILTER (client-side) ── */}
-        <PostsGrid posts={posts} />
+        {/* TICKER TAPE */}
+        <TickerTape />
 
-        {/* ── FOOTER ────────────────────────────── */}
-        <footer className="mt-16 text-center pb-8 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
-          <div className="glass rounded-2xl p-4 max-w-sm mx-auto">
-            <p className="text-white/20 text-[10px]">Powered by AI Multi-Source Analysis Engine</p>
-            <p className="text-white/10 text-[9px] mt-1">© 2026 NusaVerify — Hackathon BI</p>
-          </div>
-        </footer>
+        <div className="wrap" style={{ paddingTop: 24 }}>
+          {/* HERO */}
+          <header className="fade-in-down" style={{ textAlign: "center", marginBottom: 24, padding: "20px 0 18px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <Logo size={64} />
+            </div>
+            <div
+              className="chip up"
+              style={{
+                display: "inline-flex",
+                marginBottom: 14,
+                padding: "5px 12px",
+                background: "rgba(99,102,241,.13)",
+                border: "1px solid rgba(99,102,241,.3)",
+                color: "#c7d2fe",
+                fontSize: 10,
+                letterSpacing: ".15em",
+              }}
+            >
+              <span className="dot-bull blink" style={{ background: "#a5b4fc", boxShadow: "0 0 8px rgba(165,180,252,.6)" }} />
+              AI INVESTMENT INTELLIGENCE · MULTI-ASSET VALIDATION
+            </div>
+            <h1 className="h-display" style={{ fontSize: "clamp(40px,6vw,68px)", margin: "0 0 10px" }}>
+              <span className="text-gradient-brand gradient-shift">
+                Nusa<span style={{ fontWeight: 800 }}>Verify</span>
+              </span>
+            </h1>
+            <p style={{ color: "rgba(255,255,255,.5)", maxWidth: 620, margin: "0 auto", fontSize: 14, lineHeight: 1.6 }}>
+              Validasi <b style={{ color: "#a5b4fc" }}>klaim investasi lintas-aset</b> — saham, crypto, forex, emas, dan
+              kebijakan moneter — melalui AI agent multi-sumber yang menelusuri BEI, OJK, Bappebti, dan kanal finansial
+              secara real-time.
+            </p>
+          </header>
+
+          {/* MARKET PULSE */}
+          <MarketPulse />
+
+          {/* INPUT FORM */}
+          <InputForm />
+
+          {/* POSTS GRID */}
+          <PostsGrid posts={posts} />
+
+          {/* FOOTER */}
+          <footer className="fade-in-up" style={{ marginTop: 60, paddingBottom: 28, textAlign: "center" }}>
+            <div className="glass" style={{ borderRadius: 16, padding: "16px 22px", maxWidth: 560, margin: "0 auto" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+                <Logo size={24} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.55)" }}>
+                  NusaVerify Investment Intelligence
+                </span>
+              </div>
+              <p style={{ margin: "0 0 4px", fontSize: 10.5, color: "rgba(255,255,255,.3)" }}>
+                AI Multi-Source Engine · BEI · OJK / Bappebti · Media Finansial · Sentimen Retail · Analis Pasar
+              </p>
+              <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,.18)" }}>
+                © 2026 NusaVerify · Hackathon BI · <b>Bukan nasihat investasi</b> · All systems nominal
+              </p>
+            </div>
+          </footer>
+        </div>
       </div>
     </div>
   );

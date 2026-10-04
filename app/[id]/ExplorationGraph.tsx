@@ -1,28 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import ForceGraph2D, { ForceGraphMethods } from "react-force-graph-2d";
 import { Post, Think } from "@/lib/types";
+import { THINK_SOURCES, GROUP_COLOR, type AgentGroup } from "@/lib/investmentData";
 
-// ── TYPES ──────────────────────────────────────────────────────────────
+// ── TYPES ──────────────────────────────────────────────────────────
 type NodeType = "root" | "source" | "insight" | "score";
 
 interface GraphNode {
   id: string;
   type: NodeType;
-  label: string;       // primary display label
-  fullText?: string;   // full text for modal
-  url?: string;        // for source nodes
-  labelInfo?: string;  // extra metadata label, e.g owner name for Insight header
-  scoreVal?: number;   // raw numeric score for colouring
-  val: number;         // physics size
+  label: string;
+  header?: string; // micro-label (group / "INSIGHT")
+  fullText?: string;
+  url?: string;
+  scoreVal?: number;
   color: string;
-  borderColor?: string;
+  accent: string;
+  val: number;
   x?: number;
   y?: number;
-  vx?: number;
-  vy?: number;
-  // runtime
   w?: number;
   h?: number;
 }
@@ -32,115 +30,105 @@ interface GraphLink {
   target: string;
 }
 
-interface GraphData {
-  nodes: GraphNode[];
-  links: GraphLink[];
-}
-
 interface Props {
   post: Post;
   think: Think | null;
   state: string;
 }
 
-// ── COLOURS ─────────────────────────────────────────────────────────────
-const C = {
-  rootBg:     "#0f172a",
-  rootBorder: "#3b82f6",
-  rootText:   "#93c5fd",
-
-  sourceBg:     "#0f1f36",
-  sourceBorder: "#64748b",
-  sourceText:   "#cbd5e1",
-
-  insightBg:     "#0c1a2e",
-  insightBorder: "#0ea5e9",
-  insightText:   "#bae6fd",
-
-  scoreHoaxBg:   "#1c0a0a",
-  scoreHoaxBdr:  "#ef4444",
-  scoreHoaxTxt:  "#fca5a5",
-
-  scoreValidBg:  "#091a0f",
-  scoreValidBdr: "#22c55e",
-  scoreValidTxt: "#86efac",
-
-  scoreNeutBg:   "#131007",
-  scoreNeutBdr:  "#eab308",
-  scoreNeutTxt:  "#fde047",
-
-  link:          "rgba(255,255,255,0.12)",
-  particle:      "rgba(255,255,255,0.7)",
+// ── COLOR ──────────────────────────────────────────────────────────
+const ROOT = { color: "#818cf8", accent: "#c7d2fe" };
+const INSIGHT = { color: "#a78bfa", accent: "#ddd6fe" };
+const GROUP_ACCENT: Record<AgentGroup, string> = {
+  regulator: "#a5f3fc",
+  media: "#c7d2fe",
+  community: "#fde68a",
+  analyst: "#ddd6fe",
 };
 
 function scoreColor(v: number) {
-  if (v < 0) return { bg: C.scoreHoaxBg, border: C.scoreHoaxBdr, text: C.scoreHoaxTxt };
-  if (v > 0) return { bg: C.scoreValidBg, border: C.scoreValidBdr, text: C.scoreValidTxt };
-  return { bg: C.scoreNeutBg, border: C.scoreNeutBdr, text: C.scoreNeutTxt };
+  if (v < 0) return { border: "#f87171", text: "#fecaca", bg: "#1a0509" };
+  if (v > 0) return { border: "#34d399", text: "#bbf7d0", bg: "#06180e" };
+  return { border: "#fcd34d", text: "#fef08a", bg: "#1a1404" };
 }
 
-// ── CANVAS HELPERS ───────────────────────────────────────────────────────
+// ── CANVAS HELPERS ─────────────────────────────────────────────────
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
 }
 
-function wrapLine(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+function wrapLine(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   if (!text) return [];
-  const words = text.split(" ");
+  const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = words[0] ?? "";
   for (let i = 1; i < words.length; i++) {
     const test = cur + " " + words[i];
-    if (ctx.measureText(test).width <= maxW) { cur = test; }
-    else { lines.push(cur); cur = words[i]; }
+    if (ctx.measureText(test).width <= maxW) cur = test;
+    else {
+      lines.push(cur);
+      cur = words[i];
+      if (lines.length >= maxLines) break;
+    }
   }
-  lines.push(cur);
+  if (lines.length < maxLines) lines.push(cur);
+  if (lines.length === maxLines) {
+    let last = lines[maxLines - 1];
+    while (ctx.measureText(last + "…").width > maxW && last.length > 1) last = last.slice(0, -1);
+    lines[maxLines - 1] = last + "…";
+  }
   return lines;
 }
 
-// ── NODE DIMENSIONS ──────────────────────────────────────────────────────
-// Score uses radius so w/h here represents the pointer-area bounding box
-const SCORE_R = 18; // circle radius for score nodes
-const NODE_DIMS: Record<NodeType, { w: number; h: number }> = {
-  root:    { w: 130, h: 52  },
-  source:  { w: 140, h: 60  },
-  insight: { w: 130, h: 56  },
-  score:   { w: SCORE_R * 2, h: SCORE_R * 2 },
+const SCORE_R = 24;
+const DIMS: Record<NodeType, { w: number; h: number }> = {
+  root: { w: 168, h: 58 },
+  source: { w: 150, h: 64 },
+  insight: { w: 144, h: 58 },
+  score: { w: SCORE_R * 2, h: SCORE_R * 2 },
 };
 
-// ── MAIN COMPONENT ───────────────────────────────────────────────────────
 export default function ExplorationGraph({ post, think, state }: Props) {
-  const graphRef   = useRef<ForceGraphMethods | undefined>(undefined);
-  const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
-  const [dims,      setDims]      = useState({ width: 0, height: 0 });
+  const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fontsRef = useRef({ sans: "Inter, sans-serif", mono: "'JetBrains Mono', monospace" });
 
+  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({ nodes: [], links: [] });
+  const [dims, setDims] = useState({ width: 0, height: 0 });
   const [modal, setModal] = useState<{ title: string; body: string; url?: string } | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [minimized, setMinimized] = useState(state === "completed");
 
-  // Auto-minimize when exploration finishes
-  const [minimized, setMinimized] = useState(false);
+  // Resolve the actual loaded font families (next/font hashes the names).
   useEffect(() => {
-    if (state === "analyzing" || state === "completed") {
-      const t = setTimeout(() => {
-        setMinimized(true);
-      }, 1500); // Wait 1.5s after finishing before snapping closed
+    const cs = getComputedStyle(document.body);
+    const sans = cs.getPropertyValue("--font-geist-sans").trim();
+    const mono = cs.getPropertyValue("--font-geist-mono").trim();
+    fontsRef.current = {
+      sans: sans ? `${sans}, Inter, sans-serif` : "Inter, sans-serif",
+      mono: mono ? `${mono}, 'JetBrains Mono', monospace` : "'JetBrains Mono', monospace",
+    };
+  }, []);
+
+  // Minimize: completed → immediate; analyzing → after a beat; exploring → expanded.
+  useEffect(() => {
+    if (state === "completed") {
+      setMinimized(true);
+    } else if (state === "analyzing") {
+      const t = setTimeout(() => setMinimized(true), 1600);
       return () => clearTimeout(t);
     } else {
       setMinimized(false);
     }
   }, [state]);
 
-  // resize observer
+  // Resize observer
   useEffect(() => {
     const upd = () => {
       if (containerRef.current) setDims({ width: containerRef.current.clientWidth, height: containerRef.current.clientHeight });
@@ -149,114 +137,97 @@ export default function ExplorationGraph({ post, think, state }: Props) {
     const ro = new ResizeObserver(upd);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, []);
+  }, [minimized]);
 
-  // ── GRAPH DATA BUILD ────────────────────────────────────────────────
+  const totalSources = useMemo(() => {
+    if (!think) return 0;
+    const rec = think as unknown as Record<string, string | number | null>;
+    return THINK_SOURCES.filter((s) => rec[s.key] || rec[`${s.key}_insight`] || rec[`${s.key}_score`] != null).length;
+  }, [think]);
+
+  // ── BUILD GRAPH (incremental, additive) ──
   useEffect(() => {
-    setGraphData(prev => {
-      const nodeMap = new Map<string, GraphNode>(prev.nodes.map(n => [n.id, n]));
-      const linkSet = new Set<string>(prev.links.map(l => {
-        const s = typeof l.source === "object" ? (l.source as any).id : l.source;
-        const t = typeof l.target === "object" ? (l.target as any).id : l.target;
-        return `${s}->${t}`;
-      }));
+    setGraphData((prev) => {
+      const nodeMap = new Map<string, GraphNode>(prev.nodes.map((n) => [n.id, n]));
+      const linkSet = new Set<string>(
+        prev.links.map((l) => {
+          const s = typeof l.source === "object" ? (l.source as { id: string }).id : l.source;
+          const t = typeof l.target === "object" ? (l.target as { id: string }).id : l.target;
+          return `${s}->${t}`;
+        })
+      );
       let added = 0;
-
       const addNode = (n: GraphNode) => {
-        if (!nodeMap.has(n.id)) { nodeMap.set(n.id, n); added++; }
+        if (!nodeMap.has(n.id)) {
+          nodeMap.set(n.id, n);
+          added++;
+        }
       };
-      const addLink = (s: string, t: string) => {
-        const key = `${s}->${t}`;
-        if (!linkSet.has(key)) linkSet.add(key);
-      };
+      const addLink = (s: string, t: string) => linkSet.add(`${s}->${t}`);
 
-      // L1 – root
-      addNode({
-        id: "root", type: "root",
-        label: post.title || "Topik Analisis",
-        val: 30, color: C.rootBorder,
-        ...NODE_DIMS.root,
-      });
+      addNode({ id: "root", type: "root", label: post.title || "Topik Analisis", header: "ROOT NODE", color: ROOT.color, accent: ROOT.accent, val: 30, ...DIMS.root });
 
-      // L2 + L3
-      const sourceConfigs = [
-        {
-          key:      "official" as const,
-          mediaKey:  null,
-          display:  `Official: ${think?.official_name ?? "Official"}`,
-          url:      think?.official_url ?? undefined,
-          content:  think?.official ?? null,
-          insightKey: "official_insight" as const,
-          scoreKey:   "official_score"   as const,
-        },
-        { key: "cnbc"   as const, mediaKey: "cnbc"   as const, display: "Media: CNBC Indonesia",  url: think?.cnbc_url   ?? undefined, content: think?.cnbc   ?? null, insightKey: "cnbc_insight"    as const, scoreKey: "cnbc_score"    as const },
-        { key: "detik"  as const, mediaKey: "detik"  as const, display: "Media: Detik",           url: think?.detik_url  ?? undefined, content: think?.detik  ?? null, insightKey: "detik_insight"   as const, scoreKey: "detik_score"   as const },
-        { key: "kompas" as const, mediaKey: "kompas" as const, display: "Media: Kompas",          url: think?.kompas_url ?? undefined, content: think?.kompas ?? null, insightKey: "kompas_insight"  as const, scoreKey: "kompas_score"  as const },
-        { key: "inews"  as const, mediaKey: "inews"  as const, display: "Media: iNews",           url: think?.inews_url  ?? undefined, content: think?.inews  ?? null, insightKey: "inews_insight"   as const, scoreKey: "inews_score"   as const },
-        {
-          key:      "analysis" as const,
-          mediaKey:  null,
-          display:  "General Exploration",
-          url:      undefined,
-          content:  think?.analysis ?? null,
-          insightKey: "analysis_insight" as const,
-          scoreKey:   "analysis_score"   as const,
-        },
-      ] as const;
+      if (think) {
+        const rec = think as unknown as Record<string, string | number | null>;
+        THINK_SOURCES.forEach((cfg) => {
+          const raw = rec[cfg.key] as string | null;
+          const insight = rec[`${cfg.key}_insight`] as string | null;
+          const scoreRaw = rec[`${cfg.key}_score`];
+          const url = (rec[`${cfg.key}_url`] as string | null) ?? undefined;
+          if (!raw && !insight && scoreRaw == null) return;
 
-      sourceConfigs.forEach(cfg => {
-        if (!think || !think[cfg.key]) return;
+          addNode({
+            id: cfg.key,
+            type: "source",
+            label: cfg.name,
+            header: cfg.group,
+            fullText: raw ?? insight ?? undefined,
+            url,
+            color: cfg.color,
+            accent: GROUP_ACCENT[cfg.group],
+            val: 22,
+            ...DIMS.source,
+          });
+          addLink("root", cfg.key);
 
-        // L2 Source node
-        addNode({
-          id: cfg.key, type: "source",
-          label:    cfg.display,
-          fullText: cfg.content ?? undefined,
-          url:      cfg.url,
-          val: 22, color: C.sourceBorder,
-          ...NODE_DIMS.source,
+          if (insight) {
+            addNode({
+              id: `${cfg.key}-insight`,
+              type: "insight",
+              label: insight,
+              header: cfg.name,
+              fullText: insight,
+              color: INSIGHT.color,
+              accent: INSIGHT.accent,
+              val: 14,
+              ...DIMS.insight,
+            });
+            addLink(cfg.key, `${cfg.key}-insight`);
+          }
+          if (scoreRaw != null && !Number.isNaN(Number(scoreRaw))) {
+            const sv = Number(scoreRaw);
+            const sc = scoreColor(sv);
+            const word = sv < 0 ? "Hoaks" : sv > 0 ? "Valid" : "Netral";
+            addNode({
+              id: `${cfg.key}-score`,
+              type: "score",
+              label: `${Math.abs(sv)}%|${word}`,
+              scoreVal: sv,
+              color: sc.border,
+              accent: sc.text,
+              val: 12,
+              ...DIMS.score,
+            });
+            addLink(cfg.key, `${cfg.key}-score`);
+          }
         });
-        addLink("root", cfg.key);
-
-        // L3 Insight
-        const insightVal = think[cfg.insightKey];
-        if (insightVal) {
-          const preview = insightVal.length > 160 ? insightVal.slice(0, 160) + "..." : insightVal;
-          addNode({
-            id: `${cfg.key}-insight`, type: "insight",
-            label:    preview,
-            labelInfo: cfg.key, // e.g. "cnbc" or "official"
-            fullText: insightVal,
-            val: 15, color: C.insightBorder,
-            ...NODE_DIMS.insight,
-          });
-          addLink(cfg.key, `${cfg.key}-insight`);
-        }
-
-        // L3 Score
-        const scoreRaw = think[cfg.scoreKey];
-        if (scoreRaw !== null && scoreRaw !== undefined) {
-          const sv      = Number(scoreRaw);
-          const abs     = Math.abs(sv);
-          const sc      = scoreColor(sv);
-          const verdictWord = sv < 0 ? "Hoaks" : sv > 0 ? "Valid" : "Netral";
-          // label stores "PCT|VERDICT" — split in painter
-          addNode({
-            id: `${cfg.key}-score`, type: "score",
-            label:    `${abs}%|${verdictWord}`,
-            scoreVal: sv,
-            val: 12, color: sc.border,
-            ...NODE_DIMS.score,
-          });
-          addLink(cfg.key, `${cfg.key}-score`);
-        }
-      });
+      }
 
       if (added > 0) {
-        setTimeout(() => graphRef.current?.zoomToFit(1000, 60), 200);
+        setTimeout(() => graphRef.current?.zoomToFit(900, 90), 200);
         return {
           nodes: Array.from(nodeMap.values()),
-          links: Array.from(linkSet).map(k => {
+          links: Array.from(linkSet).map((k) => {
             const [s, t] = k.split("->");
             return { source: s, target: t };
           }),
@@ -266,150 +237,181 @@ export default function ExplorationGraph({ post, think, state }: Props) {
     });
   }, [post.title, think]);
 
-  // zoom in on root when it first appears alone
+  // Initial framing for the lone root node
   useEffect(() => {
     if (graphData.nodes.length === 1) {
       setTimeout(() => {
         graphRef.current?.centerAt(0, 0, 600);
-        graphRef.current?.zoom(3, 600);
+        graphRef.current?.zoom(2.2, 600);
       }, 100);
     }
   }, [graphData.nodes.length]);
 
-  // ── CUSTOM NODE PAINTER ─────────────────────────────────────────────
-  const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D) => {
-    const n = node as GraphNode;
-    n.w = NODE_DIMS[n.type].w;
-    n.h = NODE_DIMS[n.type].h;
+  // ── NODE PAINTER ──
+  const paintNode = useCallback(
+    (node: object, ctx: CanvasRenderingContext2D) => {
+      const n = node as GraphNode;
+      const { sans, mono } = fontsRef.current;
+      const isHovered = hovered === n.id;
 
-    // ── SCORE: draw as circle ───────────
-    if (n.type === "score") {
-      const sc = scoreColor(n.scoreVal ?? 0);
-      // glow
-      ctx.save();
-      ctx.shadowColor = sc.border;
-      ctx.shadowBlur  = 12;
-      ctx.beginPath();
-      ctx.arc(n.x!, n.y!, SCORE_R, 0, Math.PI * 2);
-      ctx.fillStyle = sc.bg;
-      ctx.fill();
-      ctx.restore();
-      // border
-      ctx.lineWidth   = 2;
-      ctx.strokeStyle = sc.border;
-      ctx.beginPath();
-      ctx.arc(n.x!, n.y!, SCORE_R, 0, Math.PI * 2);
-      ctx.stroke();
-      // two-line text: pct + verdict
-      const [pctStr, verdict] = n.label.split("|");
-      ctx.textAlign    = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle    = sc.text;
-      ctx.font         = `bold 8px Inter,sans-serif`;
-      ctx.fillText(pctStr, n.x!, n.y! - 5);
-      ctx.font         = `5px Inter,sans-serif`;
-      ctx.fillStyle    = `${sc.text}cc`;
-      ctx.fillText(verdict, n.x!, n.y! + 7);
-      return;
-    }
+      // ── SCORE (circle gauge) ──
+      if (n.type === "score") {
+        const sc = scoreColor(n.scoreVal ?? 0);
+        const t = performance.now() / 1000;
+        const haloR = SCORE_R + 7 + Math.sin(t * 1.8) * 1.6;
+        const halo = ctx.createRadialGradient(n.x!, n.y!, SCORE_R, n.x!, n.y!, haloR + 8);
+        halo.addColorStop(0, sc.border + "44");
+        halo.addColorStop(1, sc.border + "00");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(n.x!, n.y!, haloR + 8, 0, Math.PI * 2);
+        ctx.fill();
 
-    // ── RECT nodes (root / source / insight) ──
-    const W  = n.w!;
-    const H  = n.h!;
-    const rx = n.x! - W / 2;
-    const ry = n.y! - H / 2;
-    const r  = 6;
+        const body = ctx.createRadialGradient(n.x! - 5, n.y! - 5, 2, n.x!, n.y!, SCORE_R);
+        body.addColorStop(0, sc.border + "44");
+        body.addColorStop(0.7, sc.bg);
+        body.addColorStop(1, "#02040a");
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.arc(n.x!, n.y!, SCORE_R, 0, Math.PI * 2);
+        ctx.fill();
 
-    let bgColor     = "#0c1a2e";
-    let borderColor = n.color;
-    let labelColor  = "#e2e8f0";
-    if (n.type === "root")    { bgColor = C.rootBg;    labelColor = C.rootText; }
-    if (n.type === "source")  { bgColor = C.sourceBg;  labelColor = C.sourceText; }
-    if (n.type === "insight") { bgColor = C.insightBg; labelColor = C.insightText; }
+        ctx.lineWidth = isHovered ? 2.4 : 1.7;
+        ctx.strokeStyle = sc.border;
+        ctx.beginPath();
+        ctx.arc(n.x!, n.y!, SCORE_R, 0, Math.PI * 2);
+        ctx.stroke();
 
-    // shadow / glow
-    ctx.save();
-    ctx.shadowColor = borderColor;
-    ctx.shadowBlur  = 8;
-    roundRect(ctx, rx, ry, W, H, r);
-    ctx.fillStyle = bgColor;
-    ctx.fill();
-    ctx.restore();
+        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = sc.border + "55";
+        ctx.beginPath();
+        ctx.arc(n.x!, n.y!, SCORE_R - 4, 0, Math.PI * 2);
+        ctx.stroke();
 
-    // border
-    ctx.lineWidth   = n.type === "root" ? 2.5 : 1.5;
-    ctx.strokeStyle = borderColor;
-    roundRect(ctx, rx, ry, W, H, r);
-    ctx.stroke();
-
-    // header bar for source OR insight
-    if (n.type === "source" || n.type === "insight") {
-      // Header pill
-      ctx.fillStyle = `${borderColor}28`;
-      roundRect(ctx, rx, ry, W, 17, r);
-      ctx.fill();
-      ctx.font         = `bold 4.5px Inter,sans-serif`;
-      ctx.fillStyle    = labelColor;
-      ctx.textAlign    = "center";
-      ctx.textBaseline = "middle";
-      
-      const headerText = n.type === "insight" ? `Insight: ${n.labelInfo}` : n.label;
-      ctx.fillText(headerText, n.x!, ry + 8.5);
-
-      if (n.type === "source") {
-        // Body: content preview only (URL moved to modal only)
-        let bodyY = ry + 20;
-        if (n.fullText) {
-          ctx.font      = `3.5px Inter,sans-serif`;
-          ctx.fillStyle = `${labelColor}bb`;
-          const previewLines = wrapLine(ctx, n.fullText.slice(0, 400), W - 10);
-          const maxLines = 11;
-          previewLines.slice(0, maxLines).forEach((line, i) => {
-            ctx.fillText(line, n.x!, bodyY + i * 5);
-          });
-          if (previewLines.length > maxLines) {
-            ctx.fillStyle = "rgba(148,163,184,0.35)";
-            ctx.fillText("...", n.x!, bodyY + maxLines * 5);
-          }
-        }
-      } else {
-        // Insight block body
-        let bodyY = ry + 22;
-        ctx.font      = `3.5px Inter,sans-serif`;
-        ctx.fillStyle = `${labelColor}ee`;
-        const previewLines = wrapLine(ctx, n.label, W - 10);
-        previewLines.forEach((line, i) => {
-          ctx.fillText(line, n.x!, bodyY + i * 5.5);
-        });
+        const [pct, word] = n.label.split("|");
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = sc.text;
+        ctx.font = `800 13px ${mono}`;
+        ctx.fillText(pct, n.x!, n.y! - 4);
+        ctx.font = `700 6.5px ${mono}`;
+        ctx.fillStyle = sc.text + "cc";
+        ctx.fillText(word.toUpperCase(), n.x!, n.y! + 9);
+        return;
       }
 
-      // click hint
-      ctx.font      = `2.8px Inter,sans-serif`;
-      ctx.fillStyle = "rgba(148,163,184,0.35)";
-      ctx.fillText("↗ klik untuk detail", n.x!, ry + H - 4);
-      return;
-    }
+      // ── RECT (root / source / insight) ──
+      const W = n.w!;
+      const H = n.h!;
+      const rx = n.x! - W / 2;
+      const ry = n.y! - H / 2;
+      const rad = 9;
 
-    // text (root only here — source/insight returned early above)
-    ctx.textAlign    = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle    = labelColor;
-    
-    // Enormous font size for root
-    const rootFontSize = 8.5;
-    ctx.font = `bold ${rootFontSize}px Inter,sans-serif`;
+      ctx.save();
+      ctx.shadowColor = n.color;
+      ctx.shadowBlur = isHovered ? 18 : 9;
+      const body = ctx.createLinearGradient(rx, ry, rx, ry + H);
+      body.addColorStop(0, "rgba(13,16,32,0.97)");
+      body.addColorStop(1, "rgba(6,8,18,0.97)");
+      roundRect(ctx, rx, ry, W, H, rad);
+      ctx.fillStyle = body;
+      ctx.fill();
+      ctx.restore();
 
-    const padTop = 5;
-    const textW  = W - 10;
-    const lines  = wrapLine(ctx, n.label, textW);
-    const lh     = rootFontSize + 1.5;
-    const totalH = lines.length * lh;
-    const startY = ry + padTop + (H - padTop - totalH) / 2 + lh / 2;
-    lines.forEach((line, i) => ctx.fillText(line, n.x!, startY + i * lh));
-  }, []);
+      ctx.lineWidth = n.type === "root" ? 1.8 : 1.2;
+      ctx.strokeStyle = isHovered ? n.accent : n.color;
+      roundRect(ctx, rx, ry, W, H, rad);
+      ctx.stroke();
 
-  // ── NODE POINTER AREA ───────────────────────────────────────────────
-  const nodePointerArea = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
+      // ── ROOT ──
+      if (n.type === "root") {
+        const stripe = ctx.createLinearGradient(rx, 0, rx + W, 0);
+        stripe.addColorStop(0, n.accent + "00");
+        stripe.addColorStop(0.5, n.accent + "cc");
+        stripe.addColorStop(1, n.accent + "00");
+        ctx.fillStyle = stripe;
+        ctx.fillRect(rx + 8, ry + 1, W - 16, 1.4);
+        ctx.fillRect(rx + 8, ry + H - 2.4, W - 16, 1.4);
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = n.accent + "bb";
+        ctx.font = `700 5px ${mono}`;
+        ctx.fillText("◆ ROOT NODE", n.x!, ry + 9);
+
+        ctx.fillStyle = "#fff";
+        ctx.font = `700 8.5px ${sans}`;
+        const lines = wrapLine(ctx, n.label, W - 18, 3);
+        const lh = 10;
+        const startY = n.y! + 3 - ((lines.length - 1) * lh) / 2;
+        lines.forEach((ln, i) => ctx.fillText(ln, n.x!, startY + i * lh));
+        return;
+      }
+
+      // ── SOURCE / INSIGHT header ──
+      const headerH = 15;
+      const hdr = ctx.createLinearGradient(rx, ry, rx, ry + headerH);
+      hdr.addColorStop(0, n.color + "2e");
+      hdr.addColorStop(1, n.color + "0e");
+      ctx.save();
+      roundRect(ctx, rx, ry, W, headerH, rad);
+      ctx.clip();
+      ctx.fillStyle = hdr;
+      ctx.fillRect(rx, ry, W, headerH);
+      ctx.restore();
+
+      ctx.strokeStyle = n.color + "44";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(rx + 6, ry + headerH);
+      ctx.lineTo(rx + W - 6, ry + headerH);
+      ctx.stroke();
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = n.accent;
+      ctx.font = `700 5.4px ${mono}`;
+      const glyph = n.type === "insight" ? "◇" : "◈";
+      const hd = `${glyph} ${(n.header || "").toUpperCase()}`;
+      ctx.fillText(hd.length > 26 ? hd.slice(0, 25) + "…" : hd, rx + 8, ry + headerH / 2 + 0.4);
+
+      // status dot
+      ctx.fillStyle = n.color;
+      ctx.beginPath();
+      ctx.arc(rx + W - 8, ry + headerH / 2, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // body
+      const bodyTop = ry + headerH + 6;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      if (n.type === "source") {
+        ctx.fillStyle = "#fff";
+        ctx.font = `700 7px ${sans}`;
+        ctx.fillText(n.label.length > 24 ? n.label.slice(0, 23) + "…" : n.label, rx + 8, bodyTop + 4);
+        if (n.fullText) {
+          ctx.fillStyle = "rgba(226,232,240,0.6)";
+          ctx.font = `400 4.6px ${sans}`;
+          const preview = wrapLine(ctx, n.fullText, W - 16, 3);
+          preview.forEach((ln, i) => ctx.fillText(ln, rx + 8, bodyTop + 13 + i * 5.6));
+        }
+      } else {
+        ctx.fillStyle = "rgba(237,233,254,0.9)";
+        ctx.font = `500 5px ${sans}`;
+        const preview = wrapLine(ctx, n.label, W - 16, 5);
+        preview.forEach((ln, i) => ctx.fillText(ln, rx + 8, bodyTop + 3 + i * 6));
+      }
+
+      // open hint
+      ctx.fillStyle = "rgba(148,163,184,0.5)";
+      ctx.font = `400 3.4px ${mono}`;
+      ctx.textAlign = "right";
+      ctx.fillText("↗ open", rx + W - 6, ry + H - 4);
+    },
+    [hovered]
+  );
+
+  const nodePointerArea = useCallback((node: object, color: string, ctx: CanvasRenderingContext2D) => {
     const n = node as GraphNode;
     ctx.fillStyle = color;
     if (n.type === "score") {
@@ -417,212 +419,284 @@ export default function ExplorationGraph({ post, think, state }: Props) {
       ctx.arc(n.x!, n.y!, SCORE_R + 2, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      const W = n.w ?? NODE_DIMS[n.type].w;
-      const H = n.h ?? NODE_DIMS[n.type].h;
+      const W = n.w ?? DIMS[n.type].w;
+      const H = n.h ?? DIMS[n.type].h;
       ctx.fillRect(n.x! - W / 2, n.y! - H / 2, W, H);
     }
   }, []);
-  // ── FORCE ENGINE SETUP (longer links) ─────────────────────────────
-  const handleEngineStop = useCallback(() => {}, []);
-  const applyLinkForce = useCallback(() => {
-    const fg = graphRef.current;
-    if (!fg) return;
-    
-    // Dynamic distance: 75 for root->source, 150 for source->L3
-    (fg as any).d3Force("link")?.distance((link: any) => {
-      const s = link.source.id || link.source;
-      if (s === "root") return 75;
-      return 150;
-    });
-    
-    (fg as any).d3Force("charge")?.strength(-600);
-    (fg as any).d3ReheatSimulation?.();
 
-    // Restrict max zoom out to bounding box + dynamic tight padding
-    setTimeout(() => {
-      let padding = 30; // default for L3
-      const numNodes = graphData.nodes.length;
-      if (numNodes === 1) {
-        padding = 150; // extra large buffer for just L1
-      } else if (numNodes > 1 && numNodes < 7) {
-        padding = 80;  // medium buffer for L2
-      }
-
-      fg.zoomToFit(200, padding); 
-      setTimeout(() => {
-        // read resulting scale and strictly lock it as min bound (max zoom out)
-        // this native d3 setting instantly blocks zooming out past this point
-        const scale = fg.zoom();
-        if (scale && typeof scale === "number") {
-          (fg as any).d3Zoom()?.scaleExtent([scale, 4]);
-        }
-      }, 250); // faster snap
-    }, 50);
-  }, []);
-
-  // ── CLICK HANDLER ───────────────────────────────────────────────────
-  const handleNodeClick = useCallback((node: any) => {
-    const n = node as GraphNode;
-    if (n.type === "source" && n.fullText) {
-      setModal({ title: n.label, body: n.fullText, url: n.url });
-    }
-    if (n.type === "insight" && n.fullText) {
-      setModal({ title: "💡 Insight", body: n.fullText });
-    }
-  }, []);
-
-  // ── LINK CANVAS PAINTER (side-to-side) ─────────────────────────────
-  const paintLink = useCallback((link: any, ctx: CanvasRenderingContext2D) => {
-    const s = link.source as GraphNode;
-    const t = link.target as GraphNode;
-    if (!s.x || !s.y || !t.x || !t.y) return;
-
-    const sW = (s.w ?? NODE_DIMS[s.type].w) / 2;
-    const sH = (s.h ?? NODE_DIMS[s.type].h) / 2;
-    const tW = (t.w ?? NODE_DIMS[t.type].w) / 2;
-    const tH = (t.h ?? NODE_DIMS[t.type].h) / 2;
+  // ── LINK PAINTER (curved gradient) ──
+  const paintLink = useCallback((link: object, ctx: CanvasRenderingContext2D) => {
+    const l = link as { source: GraphNode; target: GraphNode };
+    const s = l.source;
+    const t = l.target;
+    if (s.x == null || s.y == null || t.x == null || t.y == null) return;
 
     const dx = t.x - s.x;
     const dy = t.y - s.y;
     const angle = Math.atan2(dy, dx);
+    const sR = s.type === "score" ? SCORE_R : Math.min((s.w ?? 0) / 2, (s.h ?? 0) / 2 + 14);
+    const tR = t.type === "score" ? SCORE_R : Math.min((t.w ?? 0) / 2, (t.h ?? 0) / 2 + 14);
+    const sx = s.x + Math.cos(angle) * sR;
+    const sy = s.y + Math.sin(angle) * (s.type === "score" ? SCORE_R : (s.h ?? 0) / 2);
+    const tx = t.x - Math.cos(angle) * tR;
+    const ty = t.y - Math.sin(angle) * (t.type === "score" ? SCORE_R : (t.h ?? 0) / 2);
 
-    // exit point from source node border
-    const sx = s.x + Math.cos(angle) * sW;
-    const sy = s.y + Math.sin(angle) * sH;
+    const midX = (sx + tx) / 2;
+    const midY = (sy + ty) / 2;
+    const nx = -Math.sin(angle);
+    const ny = Math.cos(angle);
+    const dist = Math.hypot(tx - sx, ty - sy);
+    const bow = s.id === "root" ? Math.min(dist * 0.16, 26) : Math.min(dist * 0.26, 52);
+    const sign = (t.id.charCodeAt(0) + t.id.length) % 2 === 0 ? 1 : -1;
+    const cx = midX + nx * bow * sign;
+    const cy = midY + ny * bow * sign;
 
-    // entry point into target node border (opposite direction)
-    const tx = t.x - Math.cos(angle) * tW;
-    const ty = t.y - Math.sin(angle) * tH;
+    let colA = "rgba(129,140,248,0.55)";
+    let colB = "rgba(34,211,238,0.35)";
+    if (t.type === "insight") {
+      colA = "rgba(167,139,250,0.55)";
+      colB = "rgba(99,102,241,0.3)";
+    } else if (t.type === "score") {
+      colA = (t.color || "#34d399") + "99";
+      colB = (t.color || "#34d399") + "22";
+    } else {
+      colA = (t.color || "#818cf8") + "88";
+      colB = (t.color || "#818cf8") + "22";
+    }
+
+    const grd = ctx.createLinearGradient(sx, sy, tx, ty);
+    grd.addColorStop(0, colA);
+    grd.addColorStop(1, colB);
 
     ctx.save();
+    ctx.shadowColor = colA;
+    ctx.shadowBlur = 5;
+    ctx.strokeStyle = grd;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
-    ctx.lineTo(tx, ty);
-    ctx.strokeStyle = "rgba(100,148,220,0.35)";
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([4, 4]);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
     ctx.stroke();
     ctx.restore();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
+    ctx.stroke();
   }, []);
 
-  // ── RENDER ──────────────────────────────────────────────────────────
+  // ── FORCES ──
+  const applyForces = useCallback(() => {
+    const fg = graphRef.current as unknown as {
+      d3Force: (k: string) => { distance?: (fn: (l: object) => number) => void; strength?: (n: number) => void } | undefined;
+      d3ReheatSimulation?: () => void;
+      zoomToFit: (ms: number, pad: number) => void;
+      zoom: () => number;
+      d3Zoom?: () => { scaleExtent?: (e: [number, number]) => void } | undefined;
+    } | undefined;
+    if (!fg) return;
+    fg.d3Force("link")?.distance?.((link: object) => {
+      const l = link as { source: { id?: string } | string; target: { id?: string } | string };
+      const sid = typeof l.source === "object" ? l.source.id : l.source;
+      const tid = (typeof l.target === "object" ? l.target.id : l.target) || "";
+      if (sid === "root") return 150;
+      if (tid.endsWith("-score")) return 78;
+      if (tid.endsWith("-insight")) return 100;
+      return 140;
+    });
+    fg.d3Force("charge")?.strength?.(-820);
+    fg.d3ReheatSimulation?.();
+    setTimeout(() => {
+      const n = graphData.nodes.length;
+      fg.zoomToFit(800, n === 1 ? 200 : n < 7 ? 130 : 80);
+      setTimeout(() => {
+        const scale = fg.zoom();
+        if (typeof scale === "number") fg.d3Zoom?.()?.scaleExtent?.([scale * 0.7, 6]);
+      }, 220);
+    }, 60);
+  }, [graphData.nodes.length]);
+
+  const handleNodeClick = useCallback((node: object) => {
+    const n = node as GraphNode;
+    if (n.type === "source" && n.fullText) setModal({ title: n.label, body: n.fullText, url: n.url });
+    if (n.type === "insight" && n.fullText) setModal({ title: `Insight · ${n.header}`, body: n.fullText });
+  }, []);
+
+  const particleColor = useCallback((link: object) => {
+    const t = (link as { target: GraphNode }).target;
+    if (t.type === "score") return scoreColor(t.scoreVal ?? 0).border;
+    if (t.type === "insight") return "rgba(196,181,253,0.95)";
+    return (t.color || "#818cf8");
+  }, []);
+
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 16 }).map((_, i) => ({
+        left: `${(i * 37) % 100}%`,
+        top: `${(i * 53) % 100}%`,
+        size: 1 + (i % 3),
+        color: i % 3 === 0 ? "rgba(129,140,248,0.6)" : i % 3 === 1 ? "rgba(34,211,238,0.5)" : "rgba(167,139,250,0.5)",
+        dur: 4 + (i % 4),
+        delay: (i * 0.3) % 3,
+      })),
+    []
+  );
+
+  // ── MINIMIZED BANNER ──
   if (minimized) {
     return (
-      <div 
+      <button
         onClick={() => setMinimized(false)}
-        className="glass rounded-2xl p-4 cursor-pointer hover:bg-white/5 transition-all text-center animate-fade-in-up border border-sky-700/40"
+        className="fade-in-up"
+        style={{ width: "100%", padding: 14, borderRadius: 14, cursor: "pointer", background: "rgba(255,255,255,.025)", border: "1px solid rgba(99,102,241,.25)", textAlign: "center", transition: "all .25s ease" }}
       >
-        <span className="text-white/40 text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2">
-          <span>+</span>
-          Knowledge Graph Tersimpan (Klik untuk melihat ulang)
+        <span className="up mono" style={{ fontSize: 11, color: "rgba(165,180,252,.7)", letterSpacing: ".15em", fontWeight: 700 }}>
+          + Lihat Knowledge Graph ({totalSources || THINK_SOURCES.length} sumber lintas-aset telah dieksplorasi)
         </span>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full rounded-3xl overflow-hidden animate-fade-in-up"
-      style={{ height: "80vh", minHeight: 600, background: "linear-gradient(135deg,#040d1a 0%,#060f1e 100%)" }}
-    >
-      {/* Header controls (Close button if currently finished but user expanded it) */}
-      {(state === "analyzing" || state === "completed") && (
-        <button 
-          onClick={() => setMinimized(true)}
-          className="absolute top-5 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-2"
-        >
-          <span>Tutup Canvas</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-        </button>
-      )}
-
-      {/* HUD badge */}
-      <div className="absolute top-5 left-5 z-10 pointer-events-none flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-        <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-400">
-          {state === "exploring" ? "AI Building Knowledge Graph..." : "Exploration Complete"}
-        </span>
+    <div ref={containerRef} className="graph-shell corner-marks fade-in-up" style={{ height: "76vh", minHeight: 560 }}>
+      {/* HUD top */}
+      <div style={{ position: "absolute", top: 16, left: 18, right: 18, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "space-between", pointerEvents: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="chip up" style={{ fontSize: 9.5, padding: "3px 9px", letterSpacing: ".15em", background: "rgba(0,0,0,.5)", border: "1px solid rgba(99,102,241,.35)", color: "#a5b4fc" }}>
+            <span className="dot-bull blink" style={{ background: "#a5b4fc", boxShadow: "0 0 6px rgba(165,180,252,.6)" }} />
+            {state === "exploring" ? "BUILDING KNOWLEDGE GRAPH" : "KNOWLEDGE GRAPH"}
+          </span>
+          <span className="mono" style={{ fontSize: 10, color: "rgba(255,255,255,.4)" }}>
+            {Math.max(0, graphData.nodes.length)} nodes
+          </span>
+        </div>
+        {(state === "analyzing" || state === "completed") && (
+          <button className="btn-ghost" style={{ pointerEvents: "auto", padding: "5px 10px", fontSize: 11 }} onClick={() => setMinimized(true)}>
+            Tutup canvas
+          </button>
+        )}
       </div>
 
       {/* Legend */}
-      <div className="absolute top-5 right-5 z-10 pointer-events-none flex flex-col gap-1 items-end">
-        {[
-          { color: C.rootBorder,    label: "Topik Utama" },
-          { color: C.sourceBorder,  label: "Sumber" },
-          { color: C.insightBorder, label: "Insight" },
-          { color: C.scoreValidBdr, label: "Valid (hijau)" },
-          { color: C.scoreHoaxBdr,  label: "Hoaks (merah)" },
-        ].map(({ color, label }) => (
-          <div key={label} className="flex items-center gap-1.5 text-[9px] text-white/40">
-            <span className="w-2.5 h-2.5 rounded-[2px] inline-block" style={{ background: color }} />
-            {label}
-          </div>
+      <div style={{ position: "absolute", left: 18, bottom: 18, zIndex: 5, pointerEvents: "none" }}>
+        <div className="mono up" style={{ fontSize: 9, color: "rgba(255,255,255,.35)", letterSpacing: ".15em", marginBottom: 6 }}>
+          LEGEND
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {[
+            { label: "ROOT · klaim utama", color: ROOT.color },
+            { label: "REGULATOR · BEI · OJK", color: GROUP_COLOR.regulator },
+            { label: "MEDIA · CNBC · Kontan · Bisnis", color: GROUP_COLOR.media },
+            { label: "SENTIMEN · komunitas retail", color: GROUP_COLOR.community },
+            { label: "ANALIS · sintesis multi-aset", color: GROUP_COLOR.analyst },
+            { label: "SKOR · verdict", color: "#34d399" },
+          ].map((l, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, boxShadow: `0 0 8px ${l.color}66` }} />
+              <span className="mono" style={{ fontSize: 9.5, color: "rgba(255,255,255,.5)", letterSpacing: ".05em" }}>
+                {l.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls hint */}
+      <div style={{ position: "absolute", right: 18, bottom: 18, zIndex: 5, pointerEvents: "none" }}>
+        <div className="glass" style={{ borderRadius: 10, padding: "6px 10px" }}>
+          <span className="mono up" style={{ fontSize: 9, color: "rgba(255,255,255,.4)", letterSpacing: ".12em" }}>
+            scroll · drag · klik node
+          </span>
+        </div>
+      </div>
+
+      {/* Floating particles */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 1 }}>
+        {particles.map((p, i) => (
+          <span
+            key={i}
+            className="graph-particle"
+            style={{
+              left: p.left,
+              top: p.top,
+              width: p.size,
+              height: p.size,
+              background: p.color,
+              boxShadow: "0 0 6px currentColor",
+              animation: `float ${p.dur}s ease-in-out infinite, breathe ${p.dur}s ease-in-out infinite`,
+              animationDelay: `${p.delay}s`,
+            }}
+          />
         ))}
       </div>
 
+      {/* Scan line */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(165,180,252,.5), transparent)", animation: "hudScan 4s ease-in-out infinite", pointerEvents: "none", zIndex: 4 }} />
+
       {/* Canvas */}
       {dims.width > 0 && dims.height > 0 && (
-        <ForceGraph2D
-          ref={graphRef}
-          width={dims.width}
-          height={dims.height}
-          graphData={graphData}
-          /* custom painters */
-          nodeCanvasObject={paintNode}
-          nodePointerAreaPaint={nodePointerArea}
-          linkCanvasObject={paintLink}
-          /* no default link rendering since we handle it */
-          linkCanvasObjectMode={() => "replace"}
-          /* directional particles drawn on TOP of our custom link */
-          linkDirectionalParticles={2}
-          linkDirectionalParticleSpeed={0.004}
-          linkDirectionalParticleWidth={2}
-          linkDirectionalParticleColor={() => "rgba(148,210,255,0.7)"}
-          /* physics */
-          d3VelocityDecay={0.35}
-          d3AlphaDecay={0.008}
-          /* interactions */
-          onNodeClick={handleNodeClick}
-          onEngineStop={applyLinkForce}
-          cooldownTicks={120}
-          nodeLabel={() => ""}  /* disable default tooltip; we use modal */
-        />
+        <div className="absolute inset-0" style={{ zIndex: 3 }}>
+          <ForceGraph2D
+            ref={graphRef}
+            width={dims.width}
+            height={dims.height}
+            graphData={graphData}
+            backgroundColor="rgba(0,0,0,0)"
+            nodeCanvasObject={paintNode}
+            nodePointerAreaPaint={nodePointerArea}
+            linkCanvasObject={paintLink}
+            linkCanvasObjectMode={() => "replace"}
+            linkDirectionalParticles={2}
+            linkDirectionalParticleSpeed={0.006}
+            linkDirectionalParticleWidth={2}
+            linkDirectionalParticleColor={particleColor}
+            d3VelocityDecay={0.34}
+            d3AlphaDecay={0.012}
+            onNodeClick={handleNodeClick}
+            onNodeHover={(node: object | null) => setHovered(node ? (node as GraphNode).id : null)}
+            onEngineStop={applyForces}
+            cooldownTicks={120}
+            nodeLabel={() => ""}
+            enableZoomInteraction
+            enablePanInteraction
+            enableNodeDrag
+          />
+        </div>
       )}
 
       {/* MODAL */}
       {modal && (
-        <div
-          className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setModal(null)}
-        >
+        <div className="absolute inset-0 flex items-center justify-center fade-in-up" style={{ zIndex: 50, background: "rgba(0,0,0,.7)", backdropFilter: "blur(8px)" }} onClick={() => setModal(null)}>
           <div
-            className="relative max-w-xl w-[90%] rounded-2xl border border-white/10 bg-[#0a1628] p-6 shadow-2xl overflow-y-auto max-h-[75vh]"
-            onClick={e => e.stopPropagation()}
+            className="glass-elev"
+            style={{ maxWidth: 560, width: "90%", borderRadius: 18, padding: 24, maxHeight: "75vh", overflowY: "auto", boxShadow: "0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(99,102,241,.18)" }}
+            onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute top-4 right-4 text-white/30 hover:text-white/70 text-xl leading-none"
               onClick={() => setModal(null)}
-            >×</button>
-
-            <h3 className="text-sm font-bold text-sky-300 uppercase tracking-widest mb-3">
-              {modal.title}
-            </h3>
-
+              aria-label="Tutup"
+              style={{ position: "absolute", top: 12, right: 12, width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.4)", background: "rgba(255,255,255,.04)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <span className="dot-bull" style={{ background: "#22d3ee", boxShadow: "0 0 8px rgba(34,211,238,.6)" }} />
+              <h3 className="up mono" style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#a5f3fc", letterSpacing: ".18em" }}>
+                {modal.title}
+              </h3>
+            </div>
             {modal.url && (
-              <a
-                href={modal.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-sky-400/70 hover:text-sky-400 mb-3 transition-colors"
-              >
-                🌐 {modal.url}
+              <a href={modal.url} target="_blank" rel="noopener noreferrer" className="mono" style={{ display: "inline-block", fontSize: 11, color: "rgba(34,211,238,.8)", marginBottom: 14, wordBreak: "break-all" }}>
+                ↗ {modal.url}
               </a>
             )}
-
-            <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">
-              {modal.body}
-            </p>
+            <p style={{ margin: 0, color: "rgba(255,255,255,.75)", fontSize: 13.5, lineHeight: 1.65, whiteSpace: "pre-line" }}>{modal.body}</p>
           </div>
         </div>
       )}

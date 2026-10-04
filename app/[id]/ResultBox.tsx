@@ -1,137 +1,175 @@
 "use client";
 
 import { Post } from "@/lib/types";
+import {
+  RESULT_META,
+  resultOf,
+  CLAIM_TYPES,
+  assetColor,
+  sentimentLabel,
+  sentimentColor,
+  riskLabel,
+} from "@/lib/investmentData";
+import { CountUp } from "../components/Viz";
+
+function MetaCell({
+  label,
+  value,
+  color,
+  mono,
+  small,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  mono?: boolean;
+  small?: boolean;
+}) {
+  return (
+    <div>
+      <div className="label-tech" style={{ fontSize: 9, marginBottom: 4 }}>
+        {label}
+      </div>
+      <div className={mono ? "mono" : ""} style={{ color: color || "#fff", fontSize: small ? 11.5 : 13, fontWeight: 700, lineHeight: 1.35 }}>
+        {value}
+      </div>
+    </div>
+  );
+}
 
 export default function ResultBox({ post }: { post: Post }) {
-  const result = (post.result || "uncertain") as "valid" | "hoax" | "uncertain";
+  const result = resultOf(post.result);
+  const m = RESULT_META[result];
+  const conf = Math.min(Math.abs(post.confidence ?? 0), 100);
 
-  const config = {
-    valid: {
-      color: "emerald",
-      bgClass: "from-emerald-950/80 to-emerald-900/20",
-      borderClass: "border-emerald-500/30",
-      textClass: "text-emerald-400",
-      icon: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
-        </svg>
-      ),
-      label: "Terverifikasi Valid"
-    },
-    hoax: {
-      color: "red",
-      bgClass: "from-red-950/80 to-red-900/20",
-      borderClass: "border-red-500/30",
-      textClass: "text-red-400",
-      icon: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-      ),
-      label: "Terdeteksi Hoaks"
-    },
-    uncertain: {
-      color: "amber",
-      bgClass: "from-amber-950/80 to-amber-900/20",
-      borderClass: "border-amber-500/30",
-      textClass: "text-amber-400",
-      icon: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-      ),
-      label: "Belum Pasti (Uncertain)"
-    }
-  };
+  const r = 54;
+  const c = 2 * Math.PI * r;
+  const filled = c * 0.75;
+  const dash = (conf / 100) * filled;
 
-  const c = config[result];
-  const conf = post.confidence || 0;
-  const pct = Math.abs(conf);
+  const verdictLabel =
+    result === "valid" ? "Terverifikasi" : result === "hoax" ? "Misinformasi / Hoaks" : "Belum Terkonfirmasi";
 
-  const isUncertainOrBorderline = result === "uncertain" || (conf > -70 && conf < 70);
-  let leaningLabel = null;
-  let leaningColor = "";
-  if (isUncertainOrBorderline && conf !== 0) {
-    if (conf > 0) {
-      leaningLabel = "Mengarah ke Valid";
-      leaningColor = config.valid.textClass;
-    } else {
-      leaningLabel = "Mengarah ke Hoaks";
-      leaningColor = config.hoax.textClass;
-    }
-  }
+  const hasMeta =
+    post.asset_class || post.ticker || post.sector || post.sentiment || post.risk_level || post.claim_type || post.price_impact;
 
   return (
-    <div className={`relative rounded-3xl p-8 md:p-12 overflow-hidden animate-fade-in-up shadow-2xl bg-gradient-to-br ${c.bgClass} border ${c.borderClass}`}>
-      {/* Tape effect if hoax */}
+    <div className={`result-shell ${result} fade-in-up`}>
       {result === "hoax" && (
-        <div className="absolute inset-0 pointer-events-none opacity-20" 
-             style={{ background: 'repeating-linear-gradient(-48deg, rgba(239,68,68,0.2) 0px, rgba(239,68,68,0.2) 10px, transparent 10px, transparent 22px, rgba(255,255,255,0.05) 22px, rgba(255,255,255,0.05) 32px, transparent 32px, transparent 44px)' }} 
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.15,
+            pointerEvents: "none",
+            background:
+              "repeating-linear-gradient(-48deg, rgba(239,68,68,.25) 0, rgba(239,68,68,.25) 10px, transparent 10px, transparent 22px, rgba(255,255,255,.05) 22px, rgba(255,255,255,.05) 32px, transparent 32px, transparent 44px)",
+          }}
         />
       )}
-      
-      <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-12">
-        {/* Left: Result Badge & Score */}
-        <div className="flex flex-col items-center shrink-0">
-          <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-lg bg-black/40 border ${c.borderClass} ${c.textClass}`}>
-            <div className="animate-[pulse_3s_ease-in-out_infinite]">{c.icon}</div>
+
+      <div className="result-grid" style={{ position: "relative", zIndex: 1, alignItems: "start" }}>
+        {/* LEFT: icon + gauge */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 22,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(0,0,0,.4)",
+              border: `1px solid ${m.color}50`,
+              color: m.color,
+              fontSize: 32,
+              fontWeight: 800,
+              boxShadow: `0 0 30px ${m.color}33`,
+            }}
+          >
+            {m.icon}
           </div>
-          
-          <div className="relative">
-            <svg width="120" height="120" viewBox="0 0 120 120">
-              {/* Background circle track (75% circle, rotated to open at bottom) */}
-              <circle 
-                cx="60" cy="60" r="54" fill="none" 
-                stroke="rgba(255,255,255,0.05)" strokeWidth="8" 
+          <div style={{ position: "relative", width: 140, height: 140 }}>
+            <svg viewBox="0 0 140 140" width="140" height="140">
+              <circle
+                cx="70"
+                cy="70"
+                r={r}
+                fill="none"
+                stroke="rgba(255,255,255,.06)"
+                strokeWidth="8"
                 strokeLinecap="round"
-                strokeDasharray="254.46 339.29"
-                style={{ transform: 'rotate(135deg)', transformOrigin: '50% 50%' }}
+                strokeDasharray={`${filled} ${c}`}
+                style={{ transform: "rotate(135deg)", transformOrigin: "50% 50%" }}
               />
-              {/* Foreground circle indicator (mapped over the 75% track) */}
-              <circle 
-                cx="60" cy="60" r="54" fill="none" 
-                stroke="currentColor" strokeWidth="8" 
-                className={c.textClass}
+              <circle
+                cx="70"
+                cy="70"
+                r={r}
+                fill="none"
+                stroke={m.color}
+                strokeWidth="8"
                 strokeLinecap="round"
-                strokeDasharray={`${(pct / 100) * 254.46} 339.29`}
-                style={{ transform: 'rotate(135deg)', transformOrigin: '50% 50%', transition: 'stroke-dasharray 1.5s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                strokeDasharray={`${dash} ${c}`}
+                style={{ transform: "rotate(135deg)", transformOrigin: "50% 50%", transition: "stroke-dasharray 1.8s cubic-bezier(.16,1,.3,1)" }}
               />
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-3xl font-black font-mono tracking-tighter ${c.textClass}`}>
-                {Math.round(pct)}%
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <span className="mono" style={{ fontSize: 36, fontWeight: 800, color: m.color, lineHeight: 1, letterSpacing: "-.03em" }}>
+                <CountUp to={Math.round(conf)} duration={1600} />%
               </span>
-              <span className="text-[9px] uppercase tracking-widest text-white/40 mt-1 text-center leading-tight">
-                Tingkat<br/>Keyakinan
+              <span className="up label-tech" style={{ marginTop: 4, fontSize: 9 }}>
+                CONFIDENCE
               </span>
             </div>
           </div>
-
-          {leaningLabel && (
-            <div className={`mt-3 px-3 py-1 rounded-full bg-black/20 border border-white/10 text-[10px] font-bold tracking-wider uppercase ${leaningColor} animate-fade-in-up`}>
-              <span className="opacity-70 mr-1">↳</span> {leaningLabel}
-            </div>
-          )}
         </div>
 
-        {/* Right: Summary & Details */}
-        <div className="flex-1 text-center md:text-left">
-          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/30 border ${c.borderClass} mb-6`}>
-            {result === "valid" && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
-            {result === "hoax" && <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />}
-            {result === "uncertain" && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />}
-            <span className={`text-xs font-bold uppercase tracking-widest ${c.textClass}`}>{c.label}</span>
+        {/* RIGHT: verdict + summary + meta */}
+        <div>
+          <div
+            className="chip up"
+            style={{ background: "rgba(0,0,0,.3)", border: `1px solid ${m.color}55`, color: m.color, padding: "5px 12px", fontSize: 10.5, letterSpacing: ".18em", marginBottom: 14 }}
+          >
+            <span className="dot-bull blink" style={{ background: m.color, boxShadow: `0 0 8px ${m.color}99` }} />
+            VERDICT · {verdictLabel.toUpperCase()}
           </div>
+          <h2 style={{ margin: "0 0 12px", fontSize: 24, fontWeight: 800, color: "#fff", letterSpacing: "-.015em" }}>Kesimpulan Analisis</h2>
+          <p style={{ margin: "0 0 22px", color: "rgba(255,255,255,.78)", fontSize: 15, lineHeight: 1.65 }}>
+            {post.summary || "Ringkasan analisis belum tersedia."}
+          </p>
 
-          <h2 className="text-2xl font-bold text-white mb-6 leading-relaxed">
-            Kesimpulan Analisis
-          </h2>
+          {hasMeta && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: 10,
+                padding: 14,
+                borderRadius: 14,
+                background: "rgba(0,0,0,.25)",
+                border: "1px solid rgba(255,255,255,.06)",
+              }}
+            >
+              <MetaCell label="Kelas Aset" value={post.asset_class || "—"} color={assetColor(post.asset_class) || "#fff"} />
+              <MetaCell label="Instrumen" value={post.ticker ? `$${post.ticker}` : "—"} mono />
+              <MetaCell label="Sektor / Sub" value={post.sector || post.category || "—"} />
+              <MetaCell label="Sentimen" value={sentimentLabel(post.sentiment)} color={sentimentColor(post.sentiment)} />
+              <MetaCell label="Risiko" value={riskLabel(post.risk_level)} color={post.risk_level === "low" ? "#6ee7b7" : post.risk_level === "medium" ? "#fcd34d" : post.risk_level === "high" ? "#fca5a5" : "#fff"} />
+              <MetaCell label="Tipe Klaim" value={(post.claim_type && CLAIM_TYPES[post.claim_type]?.label) || post.claim_type || "—"} />
+              <MetaCell label="Dampak Harga" value={post.price_impact || "—"} small />
+            </div>
+          )}
 
-          <div className="prose prose-sm prose-invert max-w-none">
-            <p className="text-white/80 text-base md:text-lg leading-relaxed">
-              {post.summary}
-            </p>
+          <div className="disclaimer" style={{ marginTop: 14 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>
+              Hasil verifikasi adalah <b>validasi informasi</b>, bukan rekomendasi jual/beli. Selalu lakukan analisis mandiri.
+            </span>
           </div>
         </div>
       </div>

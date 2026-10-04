@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { context, image } = body as {
+    const { context, image, ticker } = body as {
       context: string;
       image?: string; // base64
+      ticker?: string | null;
     };
 
     const webhookUrl = process.env.MAIN_AGENT_WEBHOOK_URL;
@@ -25,6 +26,9 @@ export async function POST(req: NextRequest) {
     };
     if (image) {
       payload.image = image;
+    }
+    if (ticker) {
+      payload.ticker = ticker;
     }
 
     const response = await fetch(webhookUrl, {

@@ -15,10 +15,20 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NusaVerify — AI-Powered Fact Checker",
+  title: "NusaVerify — AI Investment Intelligence",
   description:
-    "Verify any claim, news, or statement with AI-powered multi-source analysis. NusaVerify cross-references trusted sources to deliver confidence-scored verdicts.",
-  keywords: ["fact check", "AI", "hoax detection", "NusaVerify", "misinformation"],
+    "Validasi klaim investasi lintas-aset — saham, crypto, forex, emas, dan kebijakan moneter — dengan AI agent multi-sumber yang menelusuri BEI, OJK, Bappebti, dan kanal finansial secara real-time.",
+  keywords: [
+    "validasi investasi",
+    "saham",
+    "crypto",
+    "forex",
+    "pump and dump",
+    "investasi ilegal",
+    "NusaVerify",
+    "OJK",
+    "BEI",
+  ],
   icons: {
     icon: "/favicon.ico",
   },
